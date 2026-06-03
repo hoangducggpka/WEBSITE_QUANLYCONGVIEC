@@ -1,0 +1,979 @@
+.page{
+  padding:30px;
+  color:white;
+  background:linear-gradient(180deg,#1f2f46,#29456d);
+  height: 100vh;
+}
+
+
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+
+  background-color: rgba(76, 76, 76, 0.237);
+  color: var(--icon-color);
+
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.backButton:hover {
+  background-color: rgba(0, 0, 0, 0.628);
+  transform: translateY(-2px);
+}
+
+.backButton:active {
+  background-color: rgba(0, 0, 0, 0.2);
+  transform: translateY(0);
+}
+
+.backButton svg {
+  font-size: 20px;
+}
+.editButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 25px;
+  height: 25px;
+  border: none;
+  border-radius: 20%;
+
+  /* background-color: rgba(76, 76, 76, 0.237); */
+  background: transparent;
+  color: var(--icon-color);
+
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.editButton:hover {
+  background-color: rgba(255, 255, 255, 0.628);
+  /* transform: translateY(-2px); */
+  color:black;
+}
+
+.editButton:active {
+  background-color: rgba(0, 0, 0, 0.2);
+  transform: translateY(0);
+}
+
+.editButton svg {
+  font-size: 20px;
+}
+
+
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:25px;
+}
+
+
+
+.title{
+  font-size:28px;
+  font-weight:bold;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+
+
+.time{
+  margin-top:8px;
+  color:#9fb4d0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+
+.time_container{
+  display: flex;
+  gap:10px;
+  align-items: center;
+
+}
+
+.project_name_container{
+  display: flex;
+  gap:10px;
+  align-items: center;
+
+}
+
+
+.description{
+  margin-top:10px;
+  max-width:600px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+
+
+.members{
+  display:flex;
+  align-items:center;
+}
+
+
+
+.avatar{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  margin-left:-8px;
+  border:none;
+}
+
+
+
+
+
+.moreMembers{
+  background:#5c6d8c;
+  padding:6px 10px;
+  border-radius:20px;
+  margin-left:10px;
+}
+
+
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  margin-bottom:25px;
+}
+
+
+
+.search{
+  padding:8px 12px;
+  border-radius:6px;
+  border:none;
+  width:220px;
+}
+
+
+
+.createBtn{
+  background:#4ea1ff;
+  border:none;
+  padding:8px 14px;
+  border-radius:6px;
+  cursor:pointer;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.actionBtn{
+  background:#5a6c8f;
+  border:none;
+  padding:8px 14px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+
+
+.sections{
+  display:flex;
+  flex-direction:column;
+  gap:25px;
+  height:auto;
+  overflow:visible;
+}
+
+.section{
+  display:flex;
+  flex-direction:column;
+  height: 600px;/* hoặc tuỳ bạn */
+}
+
+.tableWrapper{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  border-radius:6px;
+  overflow:hidden;
+}
+
+.tableHeader{
+  position:sticky;
+  top:0;
+  /* z-index:2; */
+  background:#2c3e5a; /* bắt buộc có background */
+}
+
+.tableBody{
+  overflow-y:auto;
+  height: 100%;
+}
+
+
+.sectionHeader{
+  font-weight:bold;
+  margin-bottom:10px;
+  background:#5a6c8f;
+  padding:8px 12px;
+  border-radius:6px;
+  text-transform: uppercase;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; 
+}
+
+
+
+.count{
+  margin-left:10px;
+  background:#394d6f;
+  padding:3px 8px;
+  border-radius:10px;
+}
+
+
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 40px 280px 2fr 200px 150px 150px;
+  font-size: 14px;
+  padding: 10px;
+  border-bottom: 1px solid #5a6c8f;
+  align-items: center;
+  text-align: center; /* mặc định căn giữa */
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 40px 280px 2fr 200px 150px 125px;
+  padding: 10px;
+  align-items: center;
+  background: #3d4f6f;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  gap: 8px;
+  text-align: center; /* mặc định căn giữa */
+}
+
+/* Riêng cột Tên công việc thì căn trái */
+.row > div:nth-child(2),
+.tableHeader > div:nth-child(2) {
+  text-align: left;
+}
+
+
+.avatarSmall{
+  width:32px;
+  height:32px;
+  border-radius:50%;
+}
+
+
+
+.badge{
+  padding:6px 10px;
+  border-radius:6px;
+  font-size:12px;
+  text-align:center;
+  font-weight: bold;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; 
+}
+
+
+
+.easy{
+  background:#2ecc71;
+}
+
+
+
+.medium{
+  background:#f1c40f;
+}
+
+
+
+.hard{
+  background:#e67e22;
+}
+
+
+
+.extreme{
+  background:#9b59b6;
+}
+
+.text {
+  font-family: var(--font-family);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.text a {
+  color: #007bff; 
+  text-decoration: none; 
+}
+
+.text a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.manageBtn{
+margin-left:10px;
+padding:6px 10px;
+border:none;
+background:#4ea1ff;
+border-radius:6px;
+cursor:pointer;
+}
+
+
+
+.label{
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; 
+  font-weight: bold;
+  opacity: 0.5;
+
+
+}
+
+
+
+
+
+
+
+
+.groupname{
+  font-weight: bold;
+}
+
+.groupname > span{
+  font-weight: 500;
+}
+
+.avatarWrapper{
+  position:relative;
+  display:inline-block;
+}
+
+.tooltip{
+  position:absolute;
+  bottom:90%;
+  left:100%;
+  transform:translateX(-50%);
+  background:#333;
+  color:white;
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:6px;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:0.2s;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; 
+}
+
+.avatarWrapper:hover .tooltip{
+  opacity:1;
+
+  
+}
+
+.tabs{
+  display:flex;
+  gap:10px;
+  margin-bottom:15px;
+
+}
+
+.tab{
+  text-transform: uppercase;
+  font-weight: bold;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border:none;
+  border-radius:6px;
+  background:#5a6c8f;
+  cursor:pointer;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; 
+  transition:0.2s;
+  color: white
+}
+
+.tab:hover{
+  background:#6f83a8;
+}
+
+.activeTab{
+  background:#4ea1ff;
+}
+ 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  display:flex;
+  flex-direction:column;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 800px;  
+  max-width: 95%;
+  min-height: 90%;
+  overflow-y: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: fadeIn 0.3s ease;
+  font-family: "Segoe UI", sans-serif;
+}
+
+
+/* .modal{
+background:#1f2f46;
+padding:25px;
+border-radius:10px;
+width:500px;
+max-height:80vh;
+overflow-y:hidden;
+display:flex;
+flex-direction:column;
+gap:10px;
+} */
+
+
+.modal h2 {
+  margin: 0 0 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2c3e50;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 8px;
+}
+
+.modal h3 {
+  margin: 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.label2{
+    color: black;
+    font-weight: bold;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.field_container{
+  width: 100%;
+}
+
+.field_container > input, select{
+  width: 100%;
+  height: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  padding:0px 5px;
+  border-radius: 5px;
+  margin-top:5px ;
+  border:2px solid black;
+}
+
+.modalContent {
+  display: flex;
+  gap: 20px;
+}
+
+.leftColumn {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leftColumn > p{
+  color:black;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.rightColumn {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.memberRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 5px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.memberRow{
+display:flex;
+/* align-items:center; */
+gap:10px;
+background:#3d3d3d;
+padding:8px;
+border-radius:6px;
+}
+
+.memberInfoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+
+.memberRow span {
+  flex: 1;
+  color: rgb(255, 255, 255);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.avatarSmall {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ddd;
+}
+
+.modal button {
+  padding: 8px 14px;
+  margin: 6px 4px 0 0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.modal button.primary {
+  background: #4caf50;
+  color: #fff;
+}
+
+.modal button.primary:hover {
+  background: #43a047;
+}
+
+.modal button.secondary {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.modal button.secondary:hover {
+  background: #e0e0e0;
+}
+
+.skillFilter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skillBtn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.skillBtn:hover {
+  background: #e0f7fa;
+}
+
+.activeSkill {
+  background: #4caf50;
+  color: #fff;
+  border-color: #4caf50;
+}
+
+.selectedSkills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selectedSkill {
+  display: inline-block;
+  padding: 5px 12px;
+  background: #e0f2f1;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.selectedSkill:hover {
+  background: #b2dfdb;
+}
+
+.memberCard {
+  border-bottom: 1px solid #eee;
+  padding: 12px 5px;
+}
+
+.memberInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.memberName {
+  color: black;
+  font-weight: bold;
+}
+
+.member_code {
+  color: black;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.skillList {
+  margin: 6px 0;
+}
+
+.skillTag {
+  display: inline-block;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  padding: 4px 10px;
+  background: #878686;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #ffffff;
+}
+
+.noSkill {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+}
+
+.skillContainer {
+  max-height: 100px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.notJoinedContainer {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.joinedContainer {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+
+.skillContainer::-webkit-scrollbar,
+.notJoinedContainer::-webkit-scrollbar,
+.joinedContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.skillContainer::-webkit-scrollbar-track,
+.notJoinedContainer::-webkit-scrollbar-track,
+.joinedContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.skillContainer::-webkit-scrollbar-thumb,
+.notJoinedContainer::-webkit-scrollbar-thumb,
+.joinedContainer::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 4px;
+}
+
+.skillContainer::-webkit-scrollbar-thumb:hover,
+.notJoinedContainer::-webkit-scrollbar-thumb:hover,
+.joinedContainer::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.button_container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+
+
+/* modalComment css */
+.commentOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.163);
+  display: flex;
+  justify-content: flex-end; /* 👈 trượt từ phải */
+  z-index: 1000;
+}
+
+.commentModal {
+  width: 550px;
+  height: 100%;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease;
+}
+
+.commentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
+}
+
+.commentBody {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.commentInput {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #eee;
+  gap: 8px;
+}
+
+.commentInput input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.commentInput button {
+  padding: 8px 12px;
+  background: #4ea1ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.slideIn {
+  animation: slideIn 0.3s ease forwards;
+}
+
+.slideOut {
+  animation: slideOut 0.3s ease forwards;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.floatingBtn {
+  position: fixed;
+  right: 20px;
+  top: 200px;
+
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+
+  background: linear-gradient(135deg, #4ea1ff, #3c8ce0);
+  color: white;
+  font-size: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  box-shadow: 
+    0 6px 16px rgba(0,0,0,0.3),
+    inset 0 -2px 6px rgba(0,0,0,0.2);
+
+  z-index: 999;
+
+  transition: all 0.25s ease;
+}
+
+.floatingBtn:hover {
+  transform: translateY(-4px) scale(1.08);
+  box-shadow: 
+    0 10px 22px rgba(0,0,0,0.4),
+    inset 0 -2px 6px rgba(0,0,0,0.2);
+}
+
+.floatingBtn:active {
+  transform: scale(0.95);
+  box-shadow: 
+    0 3px 8px rgba(0,0,0,0.3),
+    inset 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.badge2 {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+
+  background: #ff3b30;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 0 0 2px #1f2f46;
+}
+
+.hasNotify {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255,59,48, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255,59,48, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255,59,48, 0);
+  }
+}
+
+
+/* member modal */
+.memberModalLayout {
+  display: grid;
+  grid-template-rows: 120px 1fr;
+  gap: 16px;
+
+  height: 80vh;
+}
+
+/* SKILL (row trên) */
+.memberModalLayout .leftColumn {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* ROW dưới: 2 cột */
+.memberModalLayout .rightColumn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  height: 100%;
+  overflow: hidden; /* ❌ chặn leak scroll */
+}
+
+/* 2 box thành viên */
+.memberModalLayout .notJoinedContainer,
+.memberModalLayout .joinedContainer {
+  height: 100%;
+  max-height: unset;
+  overflow-y: hidden;
+}
+
+/* fix mỗi block (title + list) thành flex column */
+.memberModalLayout .rightColumn > div {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  min-height: 0;
+}
+
+/* list scroll full */
+.memberModalLayout .notJoinedContainer,
+.memberModalLayout .joinedContainer {
+  flex: 1;
+  overflow-y: auto;
+
+  max-height: unset; /* override cái cũ */
+}
+
+/* memberlist task */
+.taskModalLayout {
+  display: flex;
+  flex-direction: column;
+  height: 80vh;
+  gap: 10px;
+}
+
+/* phần list member scroll riêng */
+.memberListContainer {
+  flex: 1;
+  overflow-y: auto;
+
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+
+  min-height: 0;
+}

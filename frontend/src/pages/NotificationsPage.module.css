@@ -1,0 +1,184 @@
+.page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.checkboxAll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.markAllBtn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #007bff;
+  color: white;
+  font-size: 13px;
+}
+
+.clearAllBtn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #f08d14;
+  color: white;
+  font-size: 13px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.card {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg-color2);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-color);
+}
+
+.unread {
+  background: rgba(0, 123, 255, 0.15);
+  border-left: 4px solid #007bff;
+}
+
+.checkbox {
+  margin-top: 4px;
+}
+
+.body {
+  flex: 1;
+  cursor: pointer;
+}
+
+.bold{
+  font-weight: bold;
+}
+
+.italic{
+  font-style: italic;
+}
+.content {
+  font-size: 14px;
+  margin-bottom: 6px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+  "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.time {
+  font-style: italic;
+}
+
+.empty {
+  text-align: center;
+  opacity: 0.6;
+  padding: 40px 0;
+}
+
+/* ===== MODAL ===== */
+.modal {
+  position: fixed;
+  inset: 0; /* shorthand cho top, right, bottom, left = 0 */
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* đảm bảo modal nằm trên cùng */
+  backdrop-filter: blur(4px); /* tạo hiệu ứng mờ nền */
+}
+
+.modalContent {
+  background: var(--bg-color2);
+  color: var(--text-color);
+  padding: 24px;
+  border-radius: 12px;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  animation: fadeInScale 0.25s ease;
+}
+
+.modalContent h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--primary-color, #007bff);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+  "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.modalContent p {
+  margin: 6px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+  "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.modalContent button {
+  margin-top: 16px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: #007bff;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+}
+
+.modalContent button:hover {
+  background: #0056b3;
+}
+
+/* Hiệu ứng xuất hiện */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

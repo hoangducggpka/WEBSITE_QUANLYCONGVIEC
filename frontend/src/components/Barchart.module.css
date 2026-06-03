@@ -1,0 +1,51 @@
+.chartContainer {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* mỗi dòng */
+.barRow {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+}
+
+/* label bên trái */
+.barLabel {
+  width: 130px;
+  flex-shrink: 0;
+  font-weight: bold;
+  color:white;
+  font-size: 13px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* đường ray */
+.barTrack {
+  flex: 1;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* thanh chạy */
+.bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+
+  border-radius: 6px;
+  transition: width 0.35s ease;
+}
+
+/* số */
+.barValue {
+  white-space: nowrap;
+}

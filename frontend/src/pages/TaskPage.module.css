@@ -1,0 +1,150 @@
+.page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ================= TOOLBAR ================= */
+
+.toolbar {
+  display: flex;
+  flex-direction: row;   
+  align-items: center;   
+  gap: 12px;             
+  justify-content: space-around; 
+  flex-wrap: nowrap;    
+}
+
+.toolbar input {
+  flex: 2;      
+  height: 40px; 
+  min-width: 220px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  transition: border-color 0.2s ease;
+}
+
+.toolbar input:focus {
+  border-color: #6366f1;
+
+}
+
+.toolbar select {
+  flex: 1;
+  height: 40px;
+  width: 100px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+}
+
+/* ================= ACTION BUTTONS ================= */
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.deleteBtn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.deleteBtn:hover {
+  background: #dc2626;
+}
+
+.clearBtn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.clearBtn:hover {
+  background: #2563eb;
+}
+
+/* ================= TASK GRID ================= */
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+
+  max-height: 700px;   
+  overflow-y: auto;   
+  padding-right: 8px;  
+  
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #f0f0f0;
+}
+
+.list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+
+/* ================= CARD ================= */
+
+.cardWrapper {
+  position: relative;
+  transition: 0.25s ease;
+}
+
+.cardWrapper:hover {
+  transform: translateY(-6px);
+}
+
+/* checkbox */
+
+.checkbox {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  transform: scale(1.2);
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* selected card */
+
+.checked :global(.card) {
+  outline: 2px solid #22c55e;
+  outline-offset: -2px;
+}
+
+/* ================= EMPTY ================= */
+
+.empty {
+  text-align: center;
+  padding: 40px;
+  font-size: 15px;
+  color: #777;
+}

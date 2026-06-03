@@ -1,0 +1,107 @@
+.wrapper {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #1c1c1c, #2a2a2a);
+}
+
+.container {
+  width: 900px;
+  height: 550px;
+  background: #fff;
+  display: flex;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  transition: 0.6s ease-in-out;
+}
+
+.formContainer {
+  width: 50%;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: 0.6s ease-in-out;
+}
+
+.formContainer h2 {
+  margin-bottom: 30px;
+}
+
+.formContainer form {
+  display: flex;
+  flex-direction: column;
+}
+
+.formContainer input {
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  outline: none;
+  transition: 0.3s;
+}
+
+.formContainer input:focus {
+  border-color: #4e73df;
+}
+
+.formContainer button {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #4e73df;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.formContainer button:hover {
+  background: #2e59d9;
+}
+
+.switchText {
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.switchText span {
+  color: #4e73df;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.sidePanel {
+  width: 50%;
+  background: linear-gradient(135deg, #4e73df, #1cc88a);
+  color: white;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: 0.6s ease-in-out;
+}
+
+.sidePanel h1 {
+  font-size: 32px;
+  margin-bottom: 20px;
+}
+
+.error {
+  color: red;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+/* Animation effect */
+
+.active .formContainer {
+  transform: translateX(100%);
+}
+
+.active .sidePanel {
+  transform: translateX(-100%);
+}

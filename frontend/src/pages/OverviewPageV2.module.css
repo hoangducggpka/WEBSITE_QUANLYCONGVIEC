@@ -1,0 +1,129 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: #0f172a;
+  min-height: 100vh;
+  color: #e2e8f0;
+}
+
+/* KPI */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.kpiCard {
+  background: #1e293b;
+  padding: 14px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid transparent;
+  transition: 0.2s;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  background: #334155;
+}
+
+.kpiDanger { border-color: #ef4444; }
+.kpiWarning { border-color: #f59e0b; }
+.kpiSuccess { border-color: #22c55e; }
+
+/* GRID */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
+}
+
+/* SECTION */
+.section {
+  background: #1e293b;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #334155;
+  height: 700px;
+  overflow: hidden;
+}
+
+/* LIST */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* ZONE */
+.memberZone { border-color: #ef4444; }
+.leaderZone { border-color: #3b82f6; }
+
+/* FILTER */
+.filterRow {
+  display: flex;
+  gap: 6px;
+}
+
+.filterBtn {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+  background: #0f172a;
+  color: white;
+  border: 1px solid #334155;
+  cursor: pointer;
+}
+
+.activeFilter {
+  border-color: #3b82f6;
+}
+
+/* MONITOR */
+.monitorCard {
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.monitorCard:hover {
+  transform: translateY(-2px);
+  background: #1e293b;
+}
+
+.monitorWarning { border-color: #f59e0b; }
+.monitorCritical { border-color: #ef4444; }
+.monitorReview { border-color: #22c55e; }
+
+.monitorTitle {
+  font-weight: 600;
+}
+
+.monitorMeta {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.monitorUser {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 4px;
+}
