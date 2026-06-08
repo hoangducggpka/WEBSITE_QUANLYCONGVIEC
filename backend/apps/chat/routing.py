@@ -1,3 +1,4 @@
+#apps/chat/routing.py
 from django.urls import re_path
 
 from .consumers.message_consumer import MessageConsumer

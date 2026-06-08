@@ -99,11 +99,13 @@ class LogoutView(APIView):
                 {"error": "Invalid or expired token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
+from apps.accounts.models import UserProfile
 class MyProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        profile = request.user.profile
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user
+        )
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data)

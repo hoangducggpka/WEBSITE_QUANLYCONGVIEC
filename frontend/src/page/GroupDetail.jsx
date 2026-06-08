@@ -1,10 +1,10 @@
 // GroupDetail.jsx
 import styles from "./GroupDetail.module.css";
 import { IoMdArrowRoundBack } from "react-icons/io";
-
+import { usePresence } from "../context/PresenceContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import { CiLogout } from "react-icons/ci";
 import { apiFetch } from "../utils/api";
 
 import {
@@ -110,7 +110,6 @@ function Modal({ title, onClose, children }) {
     </AnimatePresence>
   );
 }
-
 // ─── MAIN COMPONENT ───────────────────────────────────────────
 function GroupDetail() {
   const navigate = useNavigate();
@@ -123,13 +122,16 @@ function GroupDetail() {
   const [members, setMembers]       = useState([]);     // [{ user_id, fullname, username, user_code, avatarpath, role }]
   const [projects, setProjects]     = useState([]);     // [{ uuid, name, status, progress, tasks }]
   const [requests, setRequests]     = useState([]);     // [{ uuid, fullname, user_code, created_at }]
-  const [onlineUsers, setOnlineUsers] = useState([]);   // [user_id, ...]
+  // const [onlineUsers, setOnlineUsers] = useState([]);   // [user_id, ...]
 
   const [selected, setSelected]     = useState([]);
   const [search, setSearch]         = useState("");
   const [modal, setModal]           = useState(null);   // null | "add" | "requests"
   const [username, setUsername]     = useState("");     // input thêm thành viên
 
+  const { onlineUsers } = usePresence();
+  console.log("ONLINE USERS:", onlineUsers);
+  
   // ── Load dữ liệu nhóm ──
   const loadGroup = async () => {
     try {
@@ -178,63 +180,63 @@ function GroupDetail() {
   // ── WebSocket presence ──
   const wsRef = useRef(null); // giữ instance qua StrictMode double-mount
 
-  useEffect(() => {
-    if (!uuid) return;
+  // useEffect(() => {
+  //   if (!uuid) return;
 
-    // Đóng WS cũ nếu còn tồn tại (StrictMode mount lại)
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+  //   // Đóng WS cũ nếu còn tồn tại (StrictMode mount lại)
+  //   if (wsRef.current) {
+  //     wsRef.current.close();
+  //     wsRef.current = null;
+  //   }
 
-    const token = localStorage.getItem("access");
-    const wsUrl = `ws://127.0.0.1:8000/ws/groups/${uuid}/?token=${token}`;
+  //   const token = localStorage.getItem("access");
+  //   const wsUrl = `ws://127.0.0.1:8000/ws/groups/${uuid}/?token=${token}`;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+  //   const ws = new WebSocket(wsUrl);
+  //   wsRef.current = ws;
 
-    ws.onopen = () => {
-      console.log("[WS] Connected:", wsUrl);
-    };
+  //   ws.onopen = () => {
+  //     console.log("[WS] Connected:", wsUrl);
+  //   };
 
-    ws.onmessage = (event) => {
-      // Log raw để debug — xem BE đang gửi type gì
-      console.log("[WS] Raw message:", event.data);
+  //   ws.onmessage = (event) => {
+  //     // Log raw để debug — xem BE đang gửi type gì
+  //     console.log("[WS] Raw message:", event.data);
 
-      let data;
-      try {
-        data = JSON.parse(event.data);
-      } catch (e) {
-        console.error("[WS] JSON parse error:", e);
-        return;
-      }
+  //     let data;
+  //     try {
+  //       data = JSON.parse(event.data);
+  //     } catch (e) {
+  //       console.error("[WS] JSON parse error:", e);
+  //       return;
+  //     }
 
-      console.log("[WS] Parsed:", data);
+  //     console.log("[WS] Parsed:", data);
 
-      if (data.type === "presence_update") {
-        // consumer mới: { type: "presence_update", online_users: [user_id, ...] }
-        setOnlineUsers(data.online_users ?? []);
-      } else if (data.type === "presence") {
-        // consumer cũ: { type: "presence", user_id, status: "online"|"offline" }
-        // fallback để tương thích nếu BE chưa deploy consumer mới
-        setOnlineUsers((prev) => {
-          if (data.status === "online") {
-            return prev.includes(data.user_id) ? prev : [...prev, data.user_id];
-          } else {
-            return prev.filter((id) => id !== data.user_id);
-          }
-        });
-      }
-    };
+  //     if (data.type === "presence_update") {
+  //       // consumer mới: { type: "presence_update", online_users: [user_id, ...] }
+  //       setOnlineUsers(data.online_users ?? []);
+  //     } else if (data.type === "presence") {
+  //       // consumer cũ: { type: "presence", user_id, status: "online"|"offline" }
+  //       // fallback để tương thích nếu BE chưa deploy consumer mới
+  //       setOnlineUsers((prev) => {
+  //         if (data.status === "online") {
+  //           return prev.includes(data.user_id) ? prev : [...prev, data.user_id];
+  //         } else {
+  //           return prev.filter((id) => id !== data.user_id);
+  //         }
+  //       });
+  //     }
+  //   };
 
-    ws.onerror = (e) => console.error("[WS] Error:", e);
-    ws.onclose = (e) => console.log("[WS] Closed, code:", e.code, "clean:", e.wasClean);
+  //   ws.onerror = (e) => console.error("[WS] Error:", e);
+  //   ws.onclose = (e) => console.log("[WS] Closed, code:", e.code, "clean:", e.wasClean);
 
-    return () => {
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [uuid]);
+  //   return () => {
+  //     ws.close();
+  //     wsRef.current = null;
+  //   };
+  // }, [uuid]);
 
   // ── Filter members theo search ──
   const filtered = useMemo(() => {
@@ -246,6 +248,39 @@ function GroupDetail() {
         (m.user_code || "").toLowerCase().includes(q)
     );
   }, [members, search]);
+
+  // Hàm rời nhóm
+  const handleLeaveGroup = async () => {
+    const confirmLeave = window.confirm("Bạn có chắc muốn rời nhóm không?");
+    if (!confirmLeave) return;
+
+    try {
+
+      const res = await apiFetch(
+        `/groups/${uuid}/leave/`,
+        {
+          method: "POST",
+          headers: {
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Có lỗi xảy ra!");
+        return;
+      }
+
+      alert(data.message || "Rời nhóm thành công!");
+
+      loadGroup();
+
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi kết nối server!");
+    }
+  };
 
   // ── Chọn hàng ──
   const toggleSelect = (userId) =>
@@ -450,6 +485,13 @@ function GroupDetail() {
               <MdOutlineChat />
               Nhóm chat
             </button>
+            <button
+              className={styles.btn_leave}
+              onClick={handleLeaveGroup}
+            >
+              <CiLogout  />
+              Rời nhóm
+            </button>
           </div>
         </div>
       </motion.div>
@@ -515,7 +557,9 @@ function GroupDetail() {
             <tbody>
               {filtered.map((m, i) => {
                 // onlineUsers là mảng user_id (số), so sánh với m.user_id
+                // const isOnline = onlineUsers.includes(member.id);
                 const isOnline = onlineUsers.includes(m.user_id);
+                console.log("MEMBER:", m);
                 return (
                   <motion.tr
                     key={m.user_id}

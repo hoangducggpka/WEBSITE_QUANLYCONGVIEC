@@ -12,9 +12,50 @@ from apps.tasks.models import Task
 from .models import Project, UserProject
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────────────────────────────────────
+
+
+
+class ProjectOverviewSerializer(serializers.ModelSerializer):
+
+    start_date = serializers.SerializerMethodField()
+    end_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = "__all__"
+
+    def get_start_date(self, obj):
+        if not obj.start_date:
+            return None
+
+        return timezone.localtime(obj.start_date)
+
+    def get_end_date(self, obj):
+        if not obj.end_date:
+            return None
+
+        return timezone.localtime(obj.end_date)
+
+class TaskOverviewSerializer(serializers.ModelSerializer):
+
+    start_date = serializers.SerializerMethodField()
+    end_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = "__all__"
+
+    def get_start_date(self, obj):
+        if not obj.start_date:
+            return None
+
+        return timezone.localtime(obj.start_date)
+
+    def get_end_date(self, obj):
+        if not obj.end_date:
+            return None
+
+        return timezone.localtime(obj.end_date)
 
 def _build_avatar(request, profile):
     if request and profile and profile.avatarpath:

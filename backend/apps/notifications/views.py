@@ -1,3 +1,4 @@
+#apps/notifications/views.py
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Q

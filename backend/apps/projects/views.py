@@ -22,7 +22,147 @@ from .serializers import (
     ProjectListSerializer,
 )
 
+from django.db.models import Q
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+from apps.projects.models import Project, UserProject
+from apps.tasks.models import Task
+
+from .serializers import (
+    ProjectOverviewSerializer,
+    TaskOverviewSerializer
+)
+
+
+class OverviewAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        user = request.user
+        now = timezone.now()
+
+        # =========================================================
+        # PROJECTS USER LÀ LEADER
+        # =========================================================
+
+        leader_projects = Project.objects.filter(
+            group__leader=user
+        )
+
+        total_projects = leader_projects.count()
+
+        # =========================================================
+        # TASKS THUỘC CÁC PROJECT NÀY
+        # =========================================================
+
+        project_tasks = Task.objects.filter(
+            project__in=leader_projects
+        )
+
+        total_tasks = project_tasks.count()
+
+        total_done_tasks = project_tasks.filter(
+            status=Task.STATUS_DONE
+        ).count()
+
+        total_inprogress_tasks = project_tasks.filter(
+            status=Task.STATUS_INPROGRESS
+        ).count()
+
+        # =========================================================
+        # PROJECT SẮP KẾT THÚC (CÒN <=30%)
+        # =========================================================
+
+        recent_or_ending_projects = []
+
+        projects_queryset = leader_projects.exclude(
+            Q(status="finished") |
+            Q(status="preparing")
+        )
+
+        for project in projects_queryset:
+
+            total_duration = (
+                project.end_date - project.start_date
+            ).total_seconds()
+
+            remaining_duration = (
+                project.end_date - now
+            ).total_seconds()
+
+            if total_duration <= 0:
+                continue
+
+            remaining_ratio = remaining_duration / total_duration
+
+            if 0 <= remaining_ratio <= 0.3:
+                recent_or_ending_projects.append(project)
+
+        # =========================================================
+        # TASK USER ĐƯỢC ASSIGN SẮP HẾT HẠN
+        # =========================================================
+
+        user_tasks = Task.objects.select_related(
+            "assigned_to",
+            "project"
+        ).filter(
+            assigned_to__group_member__user=user
+        ).exclude(
+            Q(status=Task.STATUS_OVERDUE) |
+            Q(status=Task.STATUS_DONE)
+        )
+
+        ending_tasks = []
+
+        for task in user_tasks:
+
+            if not task.start_date or not task.end_date:
+                continue
+
+            total_duration = (
+                task.end_date - task.start_date
+            ).total_seconds()
+
+            remaining_duration = (
+                task.end_date - now
+            ).total_seconds()
+
+            if total_duration <= 0:
+                continue
+
+            remaining_ratio = remaining_duration / total_duration
+
+            if 0 <= remaining_ratio <= 0.3:
+                ending_tasks.append(task)
+
+        # =========================================================
+        # RESPONSE
+        # =========================================================
+
+        return Response({
+            "total_projects": total_projects,
+
+            "total_tasks": total_tasks,
+
+            "total_done_tasks": total_done_tasks,
+
+            "total_inprogress_tasks": total_inprogress_tasks,
+
+            "ending_projects": ProjectOverviewSerializer(
+                recent_or_ending_projects,
+                many=True
+            ).data,
+
+            "ending_tasks": TaskOverviewSerializer(
+                ending_tasks,
+                many=True
+            ).data
+        })
 def _leader_name(user) -> str:
     profile = getattr(user, "profile", None)
     return profile.fullname if profile and profile.fullname else user.username

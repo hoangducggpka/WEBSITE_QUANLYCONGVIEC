@@ -1,6 +1,6 @@
 /* =========================================================
    PROJECT DETAIL — LIGHT PRODUCTIVITY WORKSPACE UI
-   v2 — Refined & Feature-Complete
+   v3 — Full feature with split modals & datetime display
 ========================================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -13,7 +13,6 @@
     gap: 8px;
     overflow: hidden;
     box-sizing: border-box;
-    /* background: #f4f7fb; */
     font-family: "DM Sans", sans-serif;
     color: #0f172a;
     border-radius: 10px;
@@ -21,7 +20,7 @@
 }
 
 /* =========================================================
-   TOP ROW — flex only
+   TOP ROW
 ========================================================= */
 
 .topRow {
@@ -64,7 +63,6 @@
     transition: 0.15s;
     flex-shrink: 0;
 }
-
 .backBtn svg { width: 14px; height: 14px; }
 .backBtn:hover { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
 
@@ -94,7 +92,7 @@
     text-overflow: ellipsis;
 }
 
-/* ── Compact badges ── */
+/* ── Badges ── */
 .badge {
     padding: 2px 7px;
     border-radius: 999px;
@@ -122,27 +120,66 @@
     overflow: hidden;
 }
 
-/* ── Meta row: flex, compact ── */
+/* ── Meta row ── */
 .metaRow {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: nowrap;
     overflow: hidden;
 }
 
-.dateGroup { display: flex; gap: 10px; flex-shrink: 0; }
+/* ── Date group with arrow ── */
+.dateGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
 
-.dateBlock { display: flex; flex-direction: column; gap: 1px; }
+.dateBlock { display: flex; flex-direction: column; gap: 2px; }
 
 .dateLabel {
+    display: flex;
+    align-items: center;
+    gap: 3px;
     font-size: 8px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     color: #94a3b8;
 }
-.dateVal { font-size: 10px; font-weight: 600; color: #334155; }
+.dateLabel svg { width: 9px; height: 9px; }
+
+.dateVal {
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    white-space: nowrap;
+}
+
+/* Arrow between dates */
+.dateArrow {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-weight: 300;
+    flex-shrink: 0;
+}
+
+/* Days left pill */
+.daysLeftPill {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    border: 1px solid;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
 
 .leaderPill {
     display: flex;
@@ -154,19 +191,19 @@
     border-radius: 8px;
     flex-shrink: 0;
 }
-.leaderPill img { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; }
 .leaderMeta { display: flex; flex-direction: column; gap: 1px; }
 .leaderLabel { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #94a3b8; }
 .leaderName { font-size: 10px; font-weight: 600; color: #0f172a; }
 
+/* Edit project button */
 .editProjBtn {
     margin-left: auto;
-    height: 28px;
+    height: 26px;
     padding: 0 10px;
     display: flex;
     align-items: center;
     gap: 5px;
-    border-radius: 8px;
+    border-radius: 7px;
     border: 1px solid #c7d2fe;
     background: #eef2ff;
     color: #4338ca;
@@ -176,8 +213,8 @@
     transition: 0.15s;
     flex-shrink: 0;
 }
-.editProjBtn svg { width: 12px; height: 12px; }
-.editProjBtn:hover { background: #4338ca; color: white; }
+.editProjBtn svg { width: 11px; height: 11px; }
+.editProjBtn:hover { background: #4338ca; color: white; border-color: #4338ca; }
 
 .progressRow {
     display: flex;
@@ -260,35 +297,12 @@
     cursor: pointer;
     transition: 0.15s;
     position: relative;
+    white-space: nowrap;
 }
 .actBtn svg { width: 12px; height: 12px; }
 .actBtn:hover { background: #f8fafc; border-color: #cbd5e1; }
 .actBtnPrimary { background: #4f46e5; border-color: #4f46e5; color: white; }
 .actBtnPrimary:hover { background: #4338ca; }
-
-/* Comment badge */
-.commentBadge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: #ef4444;
-    color: white;
-    font-size: 8px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 0 2px white;
-    animation: badgePop 0.3s ease;
-}
-@keyframes badgePop {
-    from { transform: scale(0); }
-    to   { transform: scale(1); }
-}
 
 .membersRowWrap {
     display: flex;
@@ -307,7 +321,6 @@
     border: 2px solid transparent;
 }
 .memberAv:hover { transform: scale(1.1); border-color: #6366f1; }
-.memberAv img { width: 100%; height: 100%; object-fit: cover; }
 
 .addMemberBtn {
     width: 30px;
@@ -324,7 +337,6 @@
 .addMemberBtn svg { width: 13px; height: 13px; }
 .addMemberBtn:hover { background: #eef2ff; border-color: #6366f1; color: #4f46e5; }
 
-/* ── Mini stats: 2 cols flex ── */
 .miniStats { display: flex; gap: 6px; }
 .miniStat {
     flex: 1;
@@ -338,7 +350,7 @@
 .miniStatSub { font-size: 8px; color: #94a3b8; }
 
 /* =========================================================
-   STATS ROW — flex instead of grid
+   STATS ROW
 ========================================================= */
 .statsRow {
     display: flex;
@@ -379,7 +391,6 @@
     transition: all 0.3s ease;
 }
 
-/* Full-page expand */
 .timelineSectionExpanded {
     position: fixed;
     inset: 10px;
@@ -437,7 +448,6 @@
 .filterBtn:hover { background: #f8fafc; }
 .filterBtnActive { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
 
-/* ── Scale toggle buttons ── */
 .scaleGroup {
     display: flex;
     gap: 2px;
@@ -483,30 +493,10 @@
     transition: 0.15s;
 }
 .navBtn svg { width: 13px; height: 13px; }
-.navBtn:hover { background: #f8fafc; }
+.navBtn:hover:not(:disabled) { background: #f8fafc; }
+.navBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 .navLabel { min-width: 90px; text-align: center; font-size: 10px; font-weight: 600; color: #475569; }
 
-/* Create task quick btn in toolbar */
-.tlCreateBtn {
-    height: 32px;
-    padding: 0 12px;
-    border-radius: 8px;
-    border: none;
-    background: #4f46e5;
-    color: white;
-    font-size: 10px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-    transition: 0.15s;
-    white-space: nowrap;
-}
-.tlCreateBtn svg { width: 12px; height: 12px; }
-.tlCreateBtn:hover { background: #4338ca; }
-
-/* Expand button */
 .expandBtn {
     width: 32px;
     height: 32px;
@@ -565,9 +555,6 @@
 
 .todayHeader { color: #4338ca !important; background: #eef2ff; }
 
-/* Today vertical line */
-.todayCol { background: rgba(99,102,241,0.04); }
-
 .ganttRow { border-bottom: 1px solid #f1f5f9; }
 .ganttRow:hover { background: #fafbff; }
 
@@ -585,7 +572,6 @@
 }
 .ganttRow:hover .memberCell { background: #fafbff; }
 
-.memberCell img { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
 .memberInfo .mName { font-size: 10px; font-weight: 700; color: #0f172a; }
 .memberInfo .mRole { font-size: 9px; color: #94a3b8; }
 
@@ -596,7 +582,7 @@
 }
 
 /* =========================================================
-   TASK BAR — improved visibility
+   TASK BAR
 ========================================================= */
 .ganttBar {
     position: absolute;
@@ -617,7 +603,6 @@
     z-index: 20;
 }
 
-.barAvatar { width: 18px; height: 18px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
 .barName {
     flex: 1;
     overflow: hidden;
@@ -640,7 +625,6 @@
 }
 .barProgressFill { height: 100%; border-radius: inherit; }
 
-/* Hover actions overlay */
 .taskActions {
     position: absolute;
     right: 4px;
@@ -702,10 +686,12 @@
     transition: 0.2s;
     overflow: hidden;
 }
-.modalWide { max-width: 640px; }
+.modalWide      { max-width: 640px; }
+/* Ultra-wide for split-layout modals */
+.modalUltraWide { max-width: 860px; width: 95%; }
+
 .modalOverlay.open .modal { transform: scale(1); }
 
-/* Sticky header */
 .modalHeader {
     display: flex;
     align-items: center;
@@ -739,7 +725,6 @@
 .modalClose svg { width: 14px; height: 14px; }
 .modalClose:hover { background: #f8fafc; }
 
-/* Scrollable body */
 .modalBody {
     flex: 1;
     overflow-y: auto;
@@ -750,7 +735,6 @@
 .modalBody::-webkit-scrollbar { width: 4px; }
 .modalBody::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
 
-/* Sticky footer */
 .modalFooter {
     padding: 12px 20px;
     border-top: 1px solid #f1f5f9;
@@ -759,6 +743,53 @@
     gap: 8px;
     flex-shrink: 0;
     background: white;
+}
+
+/* =========================================================
+   SPLIT LAYOUT — for wide modals (CreateTask, Members)
+========================================================= */
+.splitLayout {
+    display: flex;
+    gap: 0;
+    min-height: 440px;
+    max-height: 60vh;
+}
+
+/* Left panel — takes more space for task info */
+.splitLeft {
+    flex: 0 0 52%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-right: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: #e2e8f0 transparent;
+}
+.splitLeft::-webkit-scrollbar { width: 3px; }
+.splitLeft::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
+
+/* Right panel — member list */
+.splitRight {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-left: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: #e2e8f0 transparent;
+}
+.splitRight::-webkit-scrollbar { width: 3px; }
+.splitRight::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
+
+/* Vertical divider between panels */
+.splitDivider {
+    flex-shrink: 0;
+    width: 1px;
+    background: #e2e8f0;
+    margin: 0 2px;
+    border-radius: 999px;
 }
 
 /* =========================================================
@@ -792,9 +823,8 @@
 .formInput:focus,
 .formSelect:focus,
 .formTextarea:focus { border-color: #6366f1; background: white; }
-.formTextarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+.formTextarea { resize: vertical; min-height: 72px; line-height: 1.6; }
 .formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.formActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 
 .btn {
     height: 36px;
@@ -812,13 +842,9 @@
 .btnGhost { background: white; border: 1px solid #dbe3ec; color: #475569; }
 .btnGhost:hover { background: #f8fafc; }
 .btnPrimary { border: none; background: #4f46e5; color: white; }
-.btnPrimary:hover { background: #4338ca; }
+.btnPrimary:hover:not(:disabled) { background: #4338ca; }
+.btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btnDanger { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
-
-/* ── Range ── */
-.rangeRow { display: flex; align-items: center; gap: 10px; }
-.rangeInput { flex: 1; accent-color: #4f46e5; }
-.rangeVal { min-width: 32px; font-size: 11px; font-weight: 700; color: #4338ca; }
 
 /* =========================================================
    MEMBERS MODAL
@@ -826,8 +852,8 @@
 .memberListItem {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 10px;
+    gap: 8px;
+    padding: 8px 10px;
     border-radius: 10px;
     border: 1px solid #e2e8f0;
     background: white;
@@ -836,36 +862,9 @@
 }
 .memberListItem:hover { background: #fafbff; border-color: #c7d2fe; }
 
-.mliAvatar { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
-
 .mliBody { flex: 1; min-width: 0; }
 .mliName { font-size: 12px; font-weight: 700; color: #0f172a; }
-.mliRole { font-size: 10px; color: #64748b; margin-bottom: 5px; }
-
-.mliStatsRow { display: flex; gap: 10px; margin-bottom: 5px; }
-.mliStat { display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
-.mliStat svg { width: 10px; height: 10px; }
-
-/* Progress bar inside member card */
-.mliProgress {
-    margin-top: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.mliProgressTrack {
-    flex: 1;
-    height: 4px;
-    border-radius: 999px;
-    background: #e2e8f0;
-    overflow: hidden;
-}
-.mliProgressFill {
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #4f46e5, #22c55e);
-}
-.mliProgressPct { font-size: 9px; font-weight: 700; color: #4338ca; }
+.mliRole { font-size: 10px; color: #64748b; margin-bottom: 3px; }
 
 .skillTags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 .skillTag {
@@ -877,53 +876,7 @@
     color: #475569;
 }
 
-/* Kick / add toggle area */
-.mliActions { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
-
-.toggle {
-    width: 36px;
-    height: 20px;
-    border-radius: 999px;
-    background: #cbd5e1;
-    position: relative;
-    cursor: pointer;
-    transition: background 0.2s;
-    border: none;
-    outline: none;
-}
-.toggle::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: white;
-    transition: left 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-.toggleOn { background: #4f46e5; }
-.toggleOn::after { left: 18px; }
-.toggleDanger { background: #ef4444 !important; }
-
-.toggleLabel {
-    font-size: 8px;
-    color: #94a3b8;
-    text-align: center;
-    white-space: nowrap;
-}
-
 .sectionDivider { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
-
-.subSectionTitle {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #94a3b8;
-    margin-bottom: 8px;
-}
 
 /* =========================================================
    COMMENTS MODAL
@@ -955,13 +908,10 @@
     gap: 8px;
     margin-bottom: 6px;
 }
-.commentHeader img { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; }
 .commentAuthor { font-size: 11px; font-weight: 700; color: #0f172a; }
 .commentTime { margin-left: auto; font-size: 9px; color: #94a3b8; }
-
 .commentText { font-size: 11px; line-height: 1.6; color: #334155; }
 
-/* ── Icon action bar ── */
 .commentActionsRow {
     display: flex;
     gap: 2px;
@@ -987,7 +937,6 @@
 .commentActBtnActive { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
 .commentActBtnDanger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
-/* ── Reply indent ── */
 .replyIndent {
     margin-top: 8px;
     margin-left: 14px;
@@ -997,67 +946,9 @@
     background: rgba(99,102,241,0.04);
 }
 .replyHeader { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
-.replyHeader img { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; }
 .replyAuthor { font-size: 10px; font-weight: 700; color: #0f172a; }
 .replyText { font-size: 10px; line-height: 1.5; color: #64748b; }
 
-/* Reply input (inline) */
-.replyInputRow {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #e2e8f0;
-}
-.replyInputRow input {
-    flex: 1;
-    height: 32px;
-    padding: 0 10px;
-    border-radius: 8px;
-    border: 1px solid #dbe3ec;
-    background: #f8fafc;
-    font-size: 11px;
-    outline: none;
-    font-family: "DM Sans", sans-serif;
-}
-.replySendBtn {
-    height: 32px;
-    padding: 0 10px;
-    border: none;
-    border-radius: 8px;
-    background: #4f46e5;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    cursor: pointer;
-}
-.replySendBtn svg { width: 11px; height: 11px; }
-
-/* Main comment input at footer */
-.commentInputRow {
-    display: flex;
-    gap: 8px;
-    padding: 12px 20px;
-    border-top: 1px solid #f1f5f9;
-    background: white;
-    flex-shrink: 0;
-}
-.commentInputRow input {
-    flex: 1;
-    height: 38px;
-    padding: 0 12px;
-    border-radius: 10px;
-    border: 1px solid #dbe3ec;
-    background: #f8fafc;
-    outline: none;
-    font-size: 12px;
-    font-family: "DM Sans", sans-serif;
-    transition: 0.15s;
-}
-.commentInputRow input:focus { border-color: #6366f1; background: white; }
 .commentSendBtn {
     height: 38px;
     padding: 0 14px;
@@ -1071,6 +962,7 @@
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
+    font-family: "DM Sans", sans-serif;
 }
 .commentSendBtn svg { width: 12px; height: 12px; }
 .commentSendBtn:hover { background: #4338ca; }
@@ -1099,3 +991,4 @@
 }
 .toast svg { width: 14px; height: 14px; color: #22c55e; }
 .toastShow { opacity: 1; transform: translateY(0); }
+

@@ -16,6 +16,7 @@ pillow = "*"
 channels = "*"
 channels-redis = "*"
 daphne = "*"
+google-generativeai = "*"
 
 [dev-packages]
 

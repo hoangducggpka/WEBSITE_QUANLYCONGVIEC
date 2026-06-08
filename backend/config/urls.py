@@ -30,7 +30,8 @@ urlpatterns = [
     path('request/', include('apps.request.urls')),
     path('skills/', include('apps.skills.urls')),
     path("comments/", include("apps.comments.urls")),
-    # path("chat/", include("apps.chat.urls")),
+    path("chat/", include("apps.chat.urls")),
+    path("security/", include("apps.security.urls")),
 ]
 
 if settings.DEBUG:

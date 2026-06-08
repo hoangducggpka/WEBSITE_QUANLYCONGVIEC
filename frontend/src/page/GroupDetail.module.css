@@ -148,7 +148,8 @@
 /* Action buttons */
 .btn_projects,
 .btn_requests,
-.btn_chat {
+.btn_chat,
+.btn_leave {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -190,6 +191,14 @@
 }
 .btn_chat:hover {
   background: #dbeafe;
+}
+.btn_leave {
+  background: #ffefef;
+  color: #d81d1d;
+  border-color: #ffa5a5;
+}
+.btn_leave:hover {
+  background: #fedbdb;
 }
 
 .badge_count {

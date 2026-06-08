@@ -337,6 +337,57 @@ function AddMemberModal({ group, onClose, onSuccess }) {
 function SearchResultCard({ item, index }) {
   const [requested, setRequested] = useState(false);
 
+  const requestJoinGroup = async () => {
+    try {
+      const res = await apiFetch(`/request/${item.uuid}/create/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const message =
+          data.detail ||
+          data.group?.[0] ||
+          Object.values(data)[0]?.[0] ||
+          "Có lỗi xảy ra";
+
+        alert(message);
+        console.log("DRF ERROR:", data);
+        setRequested(true)
+        return;
+      }
+
+      alert(data.message || "Thành công");
+      console.log("SUCCESS:", data);
+
+    } catch (err) {
+      console.error("NETWORK ERROR:", err);
+      alert("Lỗi kết nối server!");
+    }
+  };
+  // function requestJoinGroup() {
+  //   return apiFetch(`/request/${item.uuid}/create/`, {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({}),
+  //   }).then(res => {
+  //     if (!res.ok) {
+  //       setRequested(true)
+  //       return res.json().then(err => {
+  //         throw err;
+          
+  //       });
+  //     }
+  //     return res.json();
+  //   });
+  // }
   return (
     <motion.div
       className={styles.card_result}
@@ -353,7 +404,7 @@ function SearchResultCard({ item, index }) {
         </div>
         <button
           className={`${styles.btn_join} ${requested ? styles.cancel : styles.join}`}
-          onClick={() => setRequested((r) => !r)}
+          onClick={requestJoinGroup}
         >
           {requested ? "Hủy yêu cầu" : "Gửi yêu cầu"}
         </button>
@@ -544,6 +595,7 @@ function Groups() {
 
       const data = await res.json();
       setSearchResults(data ?? []);
+      console.log("RESULT", data)
     } catch {
       setSearchResults([]);
     } finally {

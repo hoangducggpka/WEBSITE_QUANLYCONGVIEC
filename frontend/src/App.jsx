@@ -1,31 +1,115 @@
 import { Routes, Route } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./component/ProtectedRoute";
 import MainLayout from "./MainLayout";
-import Login from "./pages/Login";
-
-
+import Login from "./page/Login";
+import { useAuth } from "./context/AuthContext";
+import SecurityLayout from "./SecurityLayout";
 function App() {
-  return (
-    <Routes>
+    const { loading } = useAuth();
 
-      {/* Public route */}
-      <Route path="/login" element={<Login />} />
+    if (loading) return null;
 
-      {/* Private route */}
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      />
+    return (
+        <Routes>
+            <Route path="/login" element={<Login />} />
 
-    </Routes>
-  );
+            <Route
+                path="/security/*"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <SecurityLayout />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/*"
+                element={
+                    <ProtectedRoute>
+                        <MainLayout />
+                    </ProtectedRoute>
+                }
+            />
+        </Routes>
+    );
 }
-
 export default App;
+
+//src/App.jsx
+// import { Routes, Route } from "react-router-dom";
+// import ProtectedRoute from "./component/ProtectedRoute";
+// import MainLayout from "./MainLayout";
+// import Login from "./page/Login";
+// import { useAuth } from "./context/AuthContext";
+// import SecurityLayout from "./SecurityLayout";
+
+// function App() {
+//     const { isAdmin, loading } = useAuth();
+
+//     if (loading) {
+//         return null;
+//     }
+
+//     return (
+
+//         <Routes>
+
+//             {/* PUBLIC */}
+
+//             <Route
+//                 path="/login"
+//                 element={<Login />}
+//             />
+
+//             {/* ADMIN */}
+
+//             {
+//                 isAdmin && (
+//                     <Route
+//                         path="/security/*"
+//                         element={
+//                             <ProtectedRoute>
+//                                 <SecurityLayout />
+//                             </ProtectedRoute>
+//                         }
+//                     />
+//                 )
+//             }
+
+//             {/* NORMAL USER */}
+
+//             <Route
+//                 path="/*"
+//                 element={
+//                     <ProtectedRoute>
+//                         <MainLayout />
+//                     </ProtectedRoute>
+//                 }
+//             />
+
+//         </Routes>
+//     );
+// }
+
+// export default App;
+// return (
+//   <Routes>
+
+//     {/* Public route */}
+//     <Route path="/login" element={<Login />} />
+
+//     {/* Private route */}
+//     <Route
+//       path="/*"
+//       element={
+//         <ProtectedRoute>
+//           <MainLayout />
+//         </ProtectedRoute>
+//       }
+//     />
+
+//   </Routes>
+// );
 
 
 

@@ -16,7 +16,8 @@ from django.contrib.auth.models import User
 from .utils import normalize_text
 from django.db.models import Count
 
-
+from apps.notifications.notification_service import create_notification_and_broadcast
+from apps.chat.services.chat_service import get_or_create_group_conversation
 class GroupDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -48,6 +49,7 @@ class GroupDetailView(APIView):
 
         return Response(serializer.data)
 
+
 class CreateGroupView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -56,7 +58,7 @@ class CreateGroupView(APIView):
             data=request.data,
             context={"request": request}
         )
-
+        
         if serializer.is_valid():
             group = serializer.save()
             return Response(
@@ -107,23 +109,24 @@ class AddMemberView(APIView):
         )
 
         if serializer.is_valid():
-            serializer.save()
-            leader_profile = request.user.profile
-            leader_name    = leader_profile.fullname
-            group_name     = group.name
-            username       = request.data.get("username")
-            user           = User.objects.get(username=username)
-
+            member = serializer.save()
+            user = member.user  # ✅ Lấy trực tiếp từ object vừa tạo, không query lại
+            
+            leader_name = request.user.profile.fullname
+            group_name  = group.name
             content = (
                 f"{leader_name} | {group_name} | "
                 f"{leader_name} đã thêm bạn vào nhóm '{group_name}'"
             )
-            Notification.objects.bulk_create([
-                Notification(user=user, content=content, priority=1)
-            ])
+            create_notification_and_broadcast(
+                user=user,
+                content=content,
+                group_name=f"user_{user.id}",
+                priority=2,
+            )
             return Response({"message": "Member added"}, status=201)
 
-        return Response(serializer.errors, status=400)
+                # return Response(serializer.errors, status=400)
 
 
 class LeaveGroupView(APIView):
@@ -150,12 +153,17 @@ class LeaveGroupView(APIView):
             )
 
         membership.delete()
-        fullname   = request.user.profile.fullname
+        fullname = getattr(request.user, 'profile', None)
+        fullname = fullname.fullname if fullname else request.user.username
         group_name = group.name
         content    = f"{group_name} | | {fullname} đã rời khỏi nhóm"
-        Notification.objects.bulk_create([
-            Notification(user=group.leader, content=content, priority=1)
-        ])
+
+        create_notification_and_broadcast(
+            user=group.leader,
+            content=content,
+            group_name=f"user_{group.leader.id}",
+            priority=2
+        )
 
         return Response({"message": "Bạn đã rời nhóm"}, status=status.HTTP_200_OK)
 
@@ -196,9 +204,13 @@ class KickMemberView(APIView):
             f'{group_name} | {group_name} | '
             f'{leader_name} Đã kick bạn ra khỏi nhóm "{group_name}"'
         )
-        Notification.objects.bulk_create([
-            Notification(user=user_to_kick, content=content, priority=2)
-        ])
+        create_notification_and_broadcast(
+            user=user_to_kick,
+            content=content,
+            group_name=f"user_{user_to_kick.id}",
+            priority=2
+        )
+        
         return Response({"message": "Member kicked successfully"}, status=200)
 
 

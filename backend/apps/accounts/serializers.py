@@ -42,6 +42,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
+    is_staff = serializers.BooleanField(source="user.is_staff", read_only=True)
 
     class Meta:
         model = UserProfile
@@ -49,6 +50,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "uuid",
             "username",
             "email",
+            "is_staff",
             "user_code",
             "fullname",
             "address",

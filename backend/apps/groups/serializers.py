@@ -7,7 +7,7 @@ from apps.accounts.models import UserProfile
 from apps.projects.models import Project
 from django.contrib.auth.models import User
 import random
-
+from apps.chat.services.chat_service import (get_or_create_group_conversation, add_user_to_group_conversation)
 from apps.request.models import Request
 
 class GroupDetailSerializer(serializers.Serializer):
@@ -127,11 +127,14 @@ class GroupCreateSerializer(serializers.ModelSerializer):
         color_choices = [f"card-color-{i}" for i in range(1, 11)]
         random_color = random.choice(color_choices)
 
-        return Group.objects.create(
+        group = Group.objects.create(
             leader=user,
             color=random_color,
             **validated_data
         )
+
+        get_or_create_group_conversation(group)
+        return group
 
 
 class AddMemberSerializer(serializers.Serializer):
@@ -166,11 +169,19 @@ class AddMemberSerializer(serializers.Serializer):
         group = self.context["group"]
         user = validated_data["user"]
 
-        return GroupMember.objects.create(
+        member = GroupMember.objects.create(
             user=user,
             group=group
         )
 
+        try:
+            print("ADDING TO CONVERSATION", group.id, user.id)
+            add_user_to_group_conversation(group, user)
+            print("SUCCESS")
+        except Exception as e:
+            print("ERROR adding to conversation:", e)  # ← sẽ thấy lỗi thật sự
+
+        return member
 
 class KickMemberSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()

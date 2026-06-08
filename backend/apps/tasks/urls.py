@@ -9,7 +9,10 @@ from .views import (
     RemindTaskView,
     WarningTaskView,
     UpdateTaskView,
-    RequestHelpView
+    RequestHelpView,
+    BulkRateTaskView,
+    BulkRedoTaskView,
+    BulkRemindTaskView,
 )
 
 urlpatterns = [
@@ -38,53 +41,8 @@ urlpatterns = [
     path("<uuid:task_uuid>/update/", UpdateTaskView.as_view(), name="update-task"),
 
     path("<uuid:task_uuid>/request-help/", RequestHelpView.as_view(), name="request-help"),
+    path("bulk-rate/",                         BulkRateTaskView.as_view(),        name="bulk-rate-task"),
+    path("bulk-redo/",                         BulkRedoTaskView.as_view(),        name="bulk-redo-task"),
+    path("bulk-remind/",                       BulkRemindTaskView.as_view(),      name="bulk-remind-task"),
 ]
 
-# #apps/tasks/urls.py
-# from django.urls import path
-# from .views import (
-#     BulkCreateTaskView,
-#     DeleteTaskView,
-#     MyTaskListView,
-#     UpdateTaskStatusView,
-#     WarningTaskView,
-#     # UpdateTaskNameView, 
-#     # UpdateTaskDatesView
-#     UpdateTaskView
-# )
-
-# urlpatterns = [
-#     # Tạo nhiều task cho 1 project (leader only)
-#     path(
-#         "<uuid:project_uuid>/bulk-create/",
-#         BulkCreateTaskView.as_view(),
-#         name="bulk-create-task"
-#     ),
-
-#     # Xóa 1 task (leader only)
-#     path(
-#         "bulk-delete/",
-#         DeleteTaskView.as_view(),
-#         name="bulk-delete-task"
-#     ),
-
-#     path(
-#     "my-tasks/",
-#     MyTaskListView.as_view(),
-#     name="my-task-list"
-#     ),
-#     path(
-#     "<uuid:task_uuid>/update-status/",
-#     UpdateTaskStatusView.as_view(),#taskpage
-#     name="update-task-status"
-#     ),
-
-#     path(
-#     "warning-tasks/",
-#     WarningTaskView.as_view(),
-#     name="warning-tasks"
-#     ),
-#     path("<uuid:task_uuid>/update_task/", UpdateTaskView.as_view(), name="update-task"),
-#     # path("<uuid:task_uuid>/update-dates/", UpdateTaskDatesView.as_view(), name="update-task-dates"),
-
-# ]

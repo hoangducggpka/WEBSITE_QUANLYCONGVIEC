@@ -2,7 +2,10 @@
 # apps/tasks/views.py
 from __future__ import annotations
 
-import json
+import os, json
+import google.generativeai as genai
+from django.conf import settings
+
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -40,6 +43,130 @@ def _leader_name(user) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # Bulk create tasks
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+
+class BulkRemindTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request):
+        task_uuids  = request.data.get("task_uuids", [])
+        custom_msg  = request.data.get("message", "")
+ 
+        if not task_uuids:
+            return Response({"error": "Cần cung cấp task_uuids"}, status=400)
+ 
+        tasks = Task.objects.select_related(
+            "project__group", "assigned_to__group_member__user"
+        ).filter(uuid__in=task_uuids)
+ 
+        leader_name   = _leader_name(request.user)
+        notifications = []
+ 
+        for task in tasks:
+            if task.project.group.leader != request.user:
+                return Response({"error": "Chỉ Leader mới có thể nhắc nhở"}, status=403)
+            if not task.assigned_to:
+                continue
+            notifications.append(
+                Notification(
+                    user     = task.assigned_to.group_member.user,
+                    content  = (
+                        f"{leader_name} | {task.project.group.name} | "
+                        f"Nhắc nhở: '{task.name}' – {custom_msg or 'Hãy cập nhật tiến độ!'}"
+                    ),
+                    project  = task.project,
+                    priority = 2,
+                )
+            )
+ 
+        if notifications:
+            Notification.objects.bulk_create(notifications)
+ 
+        return Response({"message": f"Đã gửi nhắc nhở {len(notifications)} task"}, status=200)
+ 
+class BulkRedoTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self, request):
+        task_uuids = request.data.get("task_uuids", [])
+        reason     = request.data.get("reason", "")
+ 
+        if not task_uuids:
+            return Response({"error": "Cần cung cấp task_uuids"}, status=400)
+ 
+        tasks = Task.objects.select_related(
+            "project__group", "assigned_to__group_member__user"
+        ).filter(uuid__in=task_uuids)
+ 
+        if not tasks.exists():
+            return Response({"error": "Không tìm thấy task"}, status=404)
+ 
+        leader_name   = _leader_name(request.user)
+        notifications = []
+ 
+        for task in tasks:
+            if task.project.group.leader != request.user:
+                return Response({"error": "Chỉ Leader mới có thể yêu cầu làm lại"}, status=403)
+ 
+            task.progress    = 0
+            task.is_approved = False
+            task.redoReason  = reason
+            task.sync_status()
+            task.save(update_fields=["progress", "is_approved", "redoReason", "status"])
+ 
+            if task.assigned_to:
+                notifications.append(
+                    Notification(
+                        user     = task.assigned_to.group_member.user,
+                        content  = (
+                            f"{leader_name} | {task.project.group.name} | "
+                            f"Yêu cầu làm lại task '{task.name}'"
+                            + (f": {reason}" if reason else "")
+                        ),
+                        project  = task.project,
+                        priority = 3,
+                    )
+                )
+ 
+        if notifications:
+            Notification.objects.bulk_create(notifications)
+ 
+        # Broadcast progress
+        if tasks.exists():
+            project  = tasks.first().project
+            progress = update_project_progress(project)
+            broadcast_project_progress(project.uuid, progress)
+ 
+        return Response({"message": f"Đã yêu cầu làm lại {tasks.count()} task"}, status=200)
+ 
+ 
+class BulkRateTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    RATED_CHOICES = {"bad", "average", "good", "excellent"}
+ 
+    def patch(self, request):
+        task_uuids = request.data.get("task_uuids", [])
+        rated      = request.data.get("rated")
+ 
+        if not task_uuids:
+            return Response({"error": "Cần cung cấp task_uuids"}, status=400)
+        if rated not in self.RATED_CHOICES:
+            return Response({"error": f"rated phải là một trong: {', '.join(self.RATED_CHOICES)}"}, status=400)
+ 
+        tasks = Task.objects.select_related("project__group").filter(uuid__in=task_uuids)
+ 
+        if not tasks.exists():
+            return Response({"error": "Không tìm thấy task"}, status=404)
+ 
+        # Kiểm tra leader
+        for task in tasks:
+            if task.project.group.leader != request.user:
+                return Response({"error": "Chỉ Leader mới có thể đánh giá task"}, status=403)
+ 
+        updated = tasks.update(rated=rated)
+        return Response({"message": f"Đã đánh giá {updated} task", "rated": rated}, status=200)
 
 class RequestHelpView(APIView):
     """
@@ -125,6 +252,7 @@ class BulkCreateTaskView(APIView):
                         project = project,
                     )
                 )
+                
 
         if notifications:
             Notification.objects.bulk_create(notifications)
@@ -241,7 +369,9 @@ class UpdateTaskView(APIView):
 # ─────────────────────────────────────────────────────────────────────────────
 # Update task PROGRESS — member action (triggers status recalc)
 # ─────────────────────────────────────────────────────────────────────────────
-
+from apps.tasks.task_service import (
+    TaskActivityService
+)
 class UpdateTaskProgressView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -282,14 +412,20 @@ class UpdateTaskProgressView(APIView):
         task.save()
 
         # Log activity
-        TaskActivity.objects.create(
-            task      = task,
-            user      = request.user,
-            action    = "progress_updated",
-            old_value = str(old_progress),
-            new_value = str(new_progress),
+        # TaskActivity.objects.create(
+        #     task      = task,
+        #     user      = request.user,
+        #     action    = "progress_updated",
+        #     old_value = str(old_progress),
+        #     new_value = str(new_progress),
+        # )
+        TaskActivityService.create_activity(
+            task=task,
+            user=request.user,
+            action="progress_updated",
+            old_value=str(old_progress),
+            new_value=str(task.progress),
         )
-
         # Notify leader if submitted for review (progress hits 100)
         if new_progress == 100 and old_progress < 100:
             leader = task.project.group.leader
@@ -487,416 +623,3 @@ class WarningTaskView(APIView):
 
         serializer = WarningTaskSerializer(result, many=True, context={"request": request})
         return Response({"count": len(result), "tasks": serializer.data})
-# #apps/tasks/views.py
-# from rest_framework.views import APIView
-# from rest_framework.permissions import IsAuthenticated
-# from rest_framework.response import Response
-# from rest_framework import status
-# from django.db.models import Count, Q
-# from .serializers import BulkTaskCreateSerializer
-# from .models import Task
-# from apps.projects.models import Project
-
-# from django.utils import timezone
-
-# from .serializers import UserTaskListSerializer, UpdateTaskStatusSerializer, WarningTaskSerializer
-
-# from apps.notifications.models import Notification
-# from django.contrib.auth.models import User
-
-
-
-# from django.utils.dateparse import parse_datetime
-
-# class UpdateTaskView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def patch(self, request, task_uuid):
-#         try:
-#             task = Task.objects.get(uuid=task_uuid)
-#         except Task.DoesNotExist:
-#             return Response({"error": "Task không tồn tại"}, status=404)
-
-#         project = task.project
-
-#         # check quyền
-#         if project.group.leader != request.user:
-#             return Response({"error": "Chỉ Leader mới có quyền cập nhật task"}, status=403)
-
-#         new_name = request.data.get("name")
-#         start_date_str = request.data.get("start_date")
-#         end_date_str = request.data.get("end_date")
-
-#         if not any([new_name, start_date_str, end_date_str]):
-#             return Response(
-#                 {"error": "Phải cung cấp ít nhất 1 trường để update"},
-#                 status=400
-#             )
-
-#         if new_name:
-#             task.name = new_name
-
-#         start_date = parse_datetime(start_date_str) if start_date_str else None
-#         end_date = parse_datetime(end_date_str) if end_date_str else None
-
-#         if start_date_str and not start_date:
-#             return Response({"error": "Định dạng ngày bắt đầu không hợp lệ"}, status=400)
-
-#         if end_date_str and not end_date:
-#             return Response({"error": "Định dạng ngày kết thúc không hợp lệ"}, status=400)
-
-#         # ====== VALIDATION ======
-#         if start_date:
-#             if task.start_date and start_date <= task.start_date:
-#                 return Response(
-#                     {"error": "Ngày bắt đầu mới phải lớn hơn ngày bắt đầu cũ"},
-#                     status=400
-#                 )
-#             if task.end_date and start_date > task.end_date:
-#                 return Response(
-#                     {"error": "ngày bắt đầu mới không thể lớn hơn ngày kết thúc cũ"},
-#                     status=400
-#                 )
-
-#         if end_date:
-#             if task.end_date and end_date <= task.end_date:
-#                 return Response(
-#                     {"error": "ngày kết thúc mới phải lớn hơn ngày kết thúc cũ"},
-#                     status=400
-#                 )
-
-#         if start_date and end_date:
-#             if start_date > end_date:
-#                 return Response(
-#                     {"error": "Ngày bắt đầu không thể lớn hơn ngày kết thúc"},
-#                     status=400
-#                 )
-
-#         # ====== UPDATE ======
-#         if start_date:
-#             task.start_date = start_date
-
-#         if end_date:
-#             task.end_date = end_date
-
-#         task.save()
-
-#         return Response({"message": "Task đã được cập nhật"}, status=200)
-
-
-# class BulkCreateTaskView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request, project_uuid):
-
-#         try:
-#             project = Project.objects.select_related("group").get(
-#                 uuid=project_uuid
-#             )
-#         except Project.DoesNotExist:
-#             return Response({"error": "Không tìm thấy dự án"}, status=404)
-        
-
-
-#         if project.computed_status == "finished":
-#             return Response(
-#                 {"error": "Dự án đã kết thúc, bạn không thể tạo thêm task"},
-#                 status=400
-#             )
-#         if project.group.leader != request.user:
-#             return Response(
-#                 {"error": "Chỉ có Trưởng nhóm mới có thể tạo task"},
-#                 status=403
-#             )
-#         current_task_count = project.tasks.count()
-#         incoming_task_count = len(request.data.get("tasks", []))
-#         if current_task_count + incoming_task_count > 50:
-#             return Response(
-#                 {
-#                     "error": f"Project chỉ được tối đa 50 tasks. Hiện tại đã có {current_task_count}"
-#                 },
-#                 status=400
-#             )
-
-#         serializer = BulkTaskCreateSerializer(
-#             data=request.data,
-#             context={"project": project}
-#         )
-
-#         serializer.is_valid(raise_exception=True)
-#         tasks = serializer.save()
-
-#                 # ===== TẠO NOTIFICATION =====
-#         creator_profile = request.user.profile
-#         creator_name = creator_profile.fullname
-#         group_name = project.group.name
-
-#         notifications = []
-
-#         for task in tasks:
-#             if task.assigned_to:
-#                 user = task.assigned_to.group_member.user
-
-#                 content = f"{creator_name} | {group_name} | {creator_name} đã giao một công việc cho bạn"
-
-#                 notifications.append(
-#                     Notification(
-#                         user=user,
-#                         content=content,
-#                         priority=1
-#                     )
-#                 )
-
-#         Notification.objects.bulk_create(notifications)
-
-#         return Response(
-#             {
-#                 "created": len(tasks),
-#                 "task_uuids": [t.uuid for t in tasks]
-#             },
-#             status=201
-#         )
-
-# # class DeleteTaskView(APIView):
-# #     permission_classes = [IsAuthenticated]
-
-# #     def delete(self, request, task_uuid):
-# #         try:
-# #             task = Task.objects.select_related(
-# #                 "project__group"
-# #             ).get(uuid=task_uuid)
-# #         except Task.DoesNotExist:
-# #             return Response({"error": "Task not found"}, status=404)
-
-# #         if task.project.group.leader != request.user:
-# #             return Response(
-# #                 {"error": "Only leader can delete task"},
-# #                 status=403
-# #             )
-
-# #         task.delete()
-# #         return Response(
-# #             {"message": "Task deleted"},
-# #             status=204
-# #         )
-
-# from .utils import update_project_progress
-# from apps.notifications.models import Notification
-
-# class DeleteTaskView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         task_uuids = request.data.get("task_uuids", [])
-
-#         if not task_uuids:
-#             return Response({"error": "No task UUIDs provided"}, status=400)
-
-#         tasks = Task.objects.select_related(
-#             "project__group",
-#             "assigned_to__group_member__user"
-#         ).filter(uuid__in=task_uuids)
-
-#         if not tasks.exists():
-#             return Response({"error": "Tasks not found"}, status=404)
-
-#         # check quyền
-#         if tasks.filter(project__group__leader=request.user).count() != tasks.count():
-#             return Response(
-#                 {"error": "Only leader can delete tasks"},
-#                 status=403
-#             )
-
-#         project = tasks.first().project
-#         if project.computed_status == "finished":#không cho xóa cv nếu pj kết thúc
-#                 return Response(
-#                     {"error":"Dự án đã kết thúc, bạn không thể xóa công việc!"},
-#                     status=403
-#                 )
-
-#         notifications = []
-
-#         for task in tasks:
-#             if not task.assigned_to:
-#                 continue
-            
-            
-#             user = task.assigned_to.group_member.user
-
-#             content = f"{project.name} | |Công việc '{task.name}' của bạn đã bị xóa!"
-
-#             notifications.append(
-#                 Notification(
-#                     user=user,
-#                     content=content,
-#                     project=project,
-#                     priority=3
-#                 )
-#             )
-
-#         deleted_count = tasks.count()
-
-#         tasks.delete()
-
-#         Notification.objects.bulk_create(notifications)
-
-#         progress = update_project_progress(project)
-
-#         return Response({
-#             "message": f"Deleted {deleted_count} tasks",
-#             "project_progress": progress
-#         }, status=200)
-
-# class MyTaskListView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         tasks = Task.objects.select_related(
-#             "project",
-#             "project__group",
-#             "assigned_to__group_member__user"
-#         ).filter(
-#             assigned_to__group_member__user=request.user
-#         ).order_by("created_at")
-
-
-#         serializer = UserTaskListSerializer(tasks, many=True)
-
-#         return Response(
-#             {
-#                 "count": tasks.count(),
-#                 "tasks": serializer.data
-#             },
-#             status=200
-#         )
-    
-
-    
-# class UpdateTaskStatusView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-    
-
-#     def patch(self, request, task_uuid):
-#         now = timezone.localtime()
-#         try:
-#             task = Task.objects.select_related(
-#                 "project",
-#                 "project__group",
-#                 "assigned_to__group_member__user"
-#             ).get(uuid=task_uuid)
-#         except Task.DoesNotExist:
-#             return Response({"error": "Task not found"}, status=404)
-
-#         if not task.assigned_to or task.assigned_to.group_member.user != request.user:
-#             return Response(
-#                 {"error": "You are not assigned to this task"},
-#                 status=403
-#             )
-#         end = timezone.localtime(task.end_date)
-#         if end < now:
-#             return Response(
-#                 {"error":"Công việc đã quá thời gian, bạn không thể cập nhật trạng thái!"},
-#                 status=403  
-#             )
-
-#         if task.project.computed_status == "preparing":
-#             return Response(
-#                 {"error":"Dự án chưa bắt đầu, bạn không thể cập nhật trạng thái công việc!"},
-#                 status=403
-#             )
-#         if task.project.computed_status == "finished":
-#             return Response(
-#                 {"error":"Dự án đã kết thúc, bạn không thể cập nhật trạng thái công việc!"},
-#                 status=403
-#             )
-
-#         serializer = UpdateTaskStatusSerializer(
-#             data=request.data,
-#             context={"task": task}
-#         )
-#         serializer.is_valid(raise_exception=True)
-
-#         new_status = serializer.validated_data["status"]
-
-#         if task.status == new_status:
-#             return Response({
-#                 "message": "No change",
-#                 "task_uuid": task.uuid,
-#                 "status": task.status,
-#                 "project_progress": task.project.progress
-#             }, status=200)
-
-#         # Update status
-#         task.status = new_status
-#         task.save()
-
-#         project = task.project
-
-#         stats = project.tasks.aggregate(
-#             total=Count("id"),
-#             done=Count("id", filter=Q(status="done"))
-#         )
-
-#         total_tasks = stats["total"]
-#         done_tasks = stats["done"]
-
-#         progress = int((done_tasks / total_tasks) * 100) if total_tasks > 0 else 0
-
-#         project.progress = progress
-#         project.save()
-
-#         return Response({
-#             "message": "Task status updated",
-#             "task_uuid": task.uuid,
-#             "new_status": task.status,
-#             "project_progress": project.progress
-#         }, status=200)
-    
-# class WarningTaskView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         user = request.user
-
-#         base_queryset = Task.objects.select_related(
-#             "project",
-#             "project__group",
-#             "assigned_to__group_member__user__profile"
-#         )
-
-#         personal_tasks = base_queryset.filter(
-#             assigned_to__group_member__user=user
-#         )
-
-#         leader_tasks = base_queryset.filter(
-#             project__group__leader=user
-#         )
-
-#         result = []
-#         seen = set()
-
-#         # ===== PERSONAL =====
-#         for task in personal_tasks:
-#             reason = WarningTaskSerializer.get_warning_reason(task)
-#             if task.uuid not in seen and reason:
-#                 task.type = "personal"
-#                 task.warning_note = reason
-#                 result.append(task)
-#                 seen.add(task.uuid)
-
-#         # ===== LEADER =====
-#         for task in leader_tasks:
-#             reason = WarningTaskSerializer.get_warning_reason(task)
-#             if task.uuid not in seen and reason:
-#                 task.type = "leader"
-#                 task.warning_note = reason
-#                 result.append(task)
-#                 seen.add(task.uuid)
-
-#         serializer = WarningTaskSerializer(result, many=True)
-
-#         return Response({
-#             "count": len(result),
-#             "tasks": serializer.data
-#         })

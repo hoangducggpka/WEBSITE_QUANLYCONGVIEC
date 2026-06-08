@@ -10,9 +10,15 @@ from .views import (
     ProjectDetailView,
     UpdateProjectNameView,
     UpdateProjectDatesView,
+    OverviewAPIView
 )
 
 urlpatterns = [
+    path(
+        "overview/",
+        OverviewAPIView.as_view(),
+        name="overview"
+    ),
     # CRUD
     path("<uuid:group_uuid>/create/",     CreateProjectView.as_view(),   name="create-project"),
     path("delete/",                       DeleteProjectView.as_view(),   name="delete-project"),
@@ -29,6 +35,7 @@ urlpatterns = [
     # Members
     path("<uuid:project_uuid>/members/add/",      AddProjectMemberView.as_view(),  name="add-project-member"),
     path("members/<uuid:userproject_uuid>/kick/", KickProjectMemberView.as_view(), name="kick-project-member"),
+
 ]
 
 # #apps/projects/urls.py

@@ -31,7 +31,11 @@ SECRET_KEY = 'django-insecure-hlkrqa2)2sxpq5sz)kye1jn8)o((9p*1fqc)bayutiooyz-g)3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "host.docker.internal",
+]
 
 
 # Application definition
@@ -61,6 +65,7 @@ INSTALLED_APPS = [
     "apps.analytics",
     "apps.activity",
     "apps.ai",
+    "apps.security"
 
 ]
 
@@ -71,6 +76,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.security.middleware.request_security.RequestSecurityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -85,6 +91,10 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+WHITELIST_IPS = [
+    "127.0.0.1",
+    "::1",
+]
 
 TEMPLATES = [
     {
@@ -179,7 +189,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
+# settings.py
+API_BASE_URL = "http://127.0.0.1:8000"  # đổi thành domain thật khi deploy
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5173",

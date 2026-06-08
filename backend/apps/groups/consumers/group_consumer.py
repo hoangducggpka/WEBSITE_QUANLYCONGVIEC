@@ -65,3 +65,6 @@ class GroupConsumer(AsyncWebsocketConsumer):
                 "online_users": event["online_users"],  # [user_id, ...]
             })
         )
+    # async def notification_message(self, event):
+    #     import json
+    #     await self.send(text_data=json.dumps(event["payload"]))
