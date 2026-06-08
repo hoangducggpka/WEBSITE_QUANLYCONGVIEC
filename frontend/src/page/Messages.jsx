@@ -223,20 +223,91 @@ function Messages() {
 
     // ── Select conversation ───────────────────────────────────────
 
-    const handleSelectConversation = useCallback((conv) => {
+    const handleSelectConversation = useCallback(async (conv) => {
+
         clearTimeout(reconnectTimer.current);
+
         setActiveConversation(conv);
+
+        // mark as read
+        try {
+
+            await apiFetch(
+                `/chat/conversations/${conv.uuid}/read/`,
+                {
+                    method: "POST",
+                    headers: {},
+                }
+            );
+
+            setConversations(prev =>
+                prev.map(c =>
+                    c.uuid === conv.uuid
+                        ? { ...c, unread_count: 0 }
+                        : c
+                )
+            );
+
+            setUnreadMessages(prev =>
+                Math.max(0, prev - conv.unread_count)
+            );
+
+        } catch (e) {
+            console.error("Mark read error:", e);
+        }
+
         currentConvRef.current = conv.uuid;
+
         setMessages([]);
         setPinnedMessages([]);
         setReplyTo(null);
         setShowPinned(false);
+
         fetchMessages(conv.uuid);
         connectWS(conv.uuid);
-            // Reset khi đổi conversation (trong handleSelectConversation)
+
         setHidePinnedBar(false);
         setPinnedIndex(0);
+
     }, [fetchMessages, connectWS]);
+    // const handleSelectConversation = useCallback(async (conv) => {
+    //     clearTimeout(reconnectTimer.current);
+    //     setActiveConversation(conv);
+
+    //     // mark read
+    //     try {
+
+    //         await apiFetch(
+    //             `/chat/conversations/${conv.uuid}/read/`,
+    //             {
+    //                 method: "POST",
+    //                 headers: {},
+    //             }
+    //         );
+
+    //         // update local state ngay lập tức
+    //         setConversations(prev =>
+    //             prev.map(c =>
+    //                 c.uuid === conv.uuid
+    //                     ? { ...c, unread_count: 0 }
+    //                     : c
+    //             )
+    //         );
+
+    //     } catch (e) {
+    //         console.error("Mark read error:", e);
+    //     }
+    //     currentConvRef.current = conv.uuid;
+    //     setMessages([]);
+    //     setPinnedMessages([]);
+    //     setReplyTo(null);
+    //     setShowPinned(false);
+    //     fetchMessages(conv.uuid);
+    //     connectWS(conv.uuid);
+    //         // Reset khi đổi conversation (trong handleSelectConversation)
+    //     setHidePinnedBar(false);
+    //     setPinnedIndex(0);
+    // }, [fetchMessages, connectWS]);
 
     // ── Send message ──────────────────────────────────────────────
 

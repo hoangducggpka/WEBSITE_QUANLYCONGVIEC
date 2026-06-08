@@ -1,3 +1,4 @@
+#apps/accounts/views.py
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +7,92 @@ from .serializers import RegisterSerializer, UserProfileSerializer, ProfileUpdat
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from rest_framework.parsers import MultiPartParser, FormParser
+
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
+
+
+
+RESET_CODES = {}
+
+class RequestPasswordResetView(APIView):
+
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        username = request.data.get("username")
+        email = request.data.get("email")
+
+        try:
+            user = User.objects.get(
+                username=username,
+                email=email
+            )
+
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        code = get_random_string(6)
+
+        RESET_CODES[email] = code
+
+        send_mail(
+            subject="Reset password",
+            message=f"Your reset code is: {code}",
+            from_email="noreply@example.com",
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        return Response({
+            "message": "Reset code sent"
+        })
+
+
+class ResetPasswordConfirmView(APIView):
+
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        email = request.data.get("email")
+        code = request.data.get("code")
+        new_password = request.data.get("new_password")
+
+        real_code = RESET_CODES.get(email)
+
+        if not real_code or real_code != code:
+            return Response(
+                {"error": "Invalid code"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(email=email)
+
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        del RESET_CODES[email]
+
+        return Response({
+            "message": "Password reset success"
+        })
+
+
 
 class AvatarUpdateView(APIView):
     permission_classes = [IsAuthenticated]

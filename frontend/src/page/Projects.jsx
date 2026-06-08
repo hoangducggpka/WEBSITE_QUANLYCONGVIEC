@@ -642,11 +642,16 @@ export default function Projects() {
           </div>
 
           {/* Right: group selector */}
-          <div className={styles.topRight} onClick={() => setShowGroup(true)}>
-            <div className={styles.groupInfo}>
+          <div className={styles.topRight} >
+            <div className={styles.groupInfo} onClick={() => {
+                      navigate(`/group-detail/${selectedGroup?.uuid}/`);
+                    }}>
               {selectedGroup ? (
                 <>
-                  <h3 title={selectedGroup.group_name}>{selectedGroup.group_name}</h3>
+                  <h3
+                    title={selectedGroup.group_name}
+
+                  >{selectedGroup.group_name}</h3>
                   <div className={styles.groupLeaderRow}>
                     {selectedGroup.leader?.avatarpath
                       ? <img src={selectedGroup.leader.avatarpath} alt="ldr" className={styles.ldrAvatar} />
@@ -667,7 +672,7 @@ export default function Projects() {
                 <p className={styles.noGroupTxt}>Vui lòng chọn nhóm</p>
               )}
             </div>
-            <div className={styles.groupToggle}>
+            <div className={styles.groupToggle} onClick={() => setShowGroup(true)} >
               <LuChevronsUpDown size={20} />
             </div>
           </div>

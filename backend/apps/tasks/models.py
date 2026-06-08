@@ -127,6 +127,8 @@ class Task(models.Model):
 
         super().save(*args, **kwargs)
 
+    
+
 
 class TaskSkill(models.Model):
     task  = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="required_skills")

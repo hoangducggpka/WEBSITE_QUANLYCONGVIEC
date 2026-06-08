@@ -58,6 +58,30 @@ class MessageConsumer(AsyncWebsocketConsumer):
                 "file_name":     None,
             }
         )
+        members = await self.get_conversation_members()
+
+        for member_id in members:
+
+        # Không gửi lại cho sender
+            if member_id == self.user.id:
+                continue
+
+            unread_count = await self.get_total_unread(member_id)
+
+
+            await self.channel_layer.group_send(
+                f"user_chat_{member_id}",
+                {
+                    "type": "unread_message",
+                    "conversation_uuid": str(self.conversation.uuid),
+                    "message": content,
+                    "sender_name": saved["sender_name"],
+                    "sender_avatar": saved["sender_avatar"],
+                    "created_at": saved["created_at"],
+                    "unread_count": unread_count,
+                }
+            )
+
 
     # ── Event handlers (nhận từ channel layer) ───────────────────
 
@@ -171,3 +195,63 @@ class MessageConsumer(AsyncWebsocketConsumer):
             "reply_to_data": reply_to_data,
         }
 
+    @database_sync_to_async
+    def get_conversation_members(self):
+        return list(
+        self.conversation.members.values_list("user_id", flat=True)
+        )
+
+    @database_sync_to_async
+    def get_total_unread(self, user_id):
+        from apps.chat.models import ConversationMember
+
+        total = 0
+
+        members = ConversationMember.objects.filter(
+            user_id=user_id
+        ).select_related("conversation")
+
+        for member in members:
+
+            if member.last_seen is None:
+                count = member.conversation.messages.exclude(
+                    sender_id=user_id
+                ).count()
+
+            else:
+                count = member.conversation.messages.filter(
+                    created_at__gt=member.last_seen,
+                    is_deleted=False
+                ).exclude(
+                    sender_id=user_id
+                ).count()
+
+            total += count
+
+        return total
+
+
+    # @database_sync_to_async
+    # def get_unread_count(self, user_id):
+
+    #     from apps.chat.models import ConversationMember
+
+    #     try:
+    #         member = ConversationMember.objects.get(
+    #             conversation=self.conversation,
+    #             user_id=user_id
+    #         )
+
+    #         if member.last_seen is None:
+    #             return self.conversation.messages.exclude(
+    #                 sender_id=user_id
+    #             ).count()
+
+    #         return self.conversation.messages.filter(
+    #             created_at__gt=member.last_seen
+    #         ).exclude(
+    #             sender_id=user_id
+    #         ).count()
+
+    #     except ConversationMember.DoesNotExist:
+    #         return 0

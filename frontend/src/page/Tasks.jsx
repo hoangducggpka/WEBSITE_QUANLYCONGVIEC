@@ -22,6 +22,7 @@ const STATUS_META = {
     inprogress: { label: "Đang làm",    cls: "s_doing"    },
     in_review:  { label: "Chờ duyệt",   cls: "s_review"   },
     done:       { label: "Hoàn thành",  cls: "s_done"     },
+    overdue:    { label: "Quá hạn",     cls: "s_overdue"  },
 };
 
 const PRIORITY_META = {
@@ -124,13 +125,14 @@ function ProgressModal({ task, onClose, onSave, saving }) {
 function TaskCard({ task, index, onOpenProgress, onToggleHelp, helpLoading }) {
     const navigate = useNavigate();
 
-    const status   = computeStatus(task.progress, task.is_approved);
+    // const status   = computeStatus(task.progress, task.is_approved);
+    const status   = task.status;
     const sMeta    = STATUS_META[status]   || STATUS_META.todo;
     const pMeta    = PRIORITY_META[task.priority] || PRIORITY_META.medium;
     const days     = getDaysLeft(task.end_date);
     const pColor   = getProgressColor(task.progress, task.is_approved);
-    const isOverdue = days < 0 && status !== "done";
-
+    // const isOverdue = days < 0 && status !== "done";
+    const isOverdue = status === "overdue";
     return (
         <motion.div
             className={`${styles.card} ${styles[`b_${task.priority}`]} ${isOverdue ? styles.card_overdue : ""}`}
@@ -236,7 +238,7 @@ function TaskCard({ task, index, onOpenProgress, onToggleHelp, helpLoading }) {
 
                 <button
                     className={styles.btn_detail}
-                    onClick={() => navigate(`/project/${task.project_uuid}/detail/`)}
+                    onClick={() => navigate(`/project-detail/${task.project_uuid}/`)}
                     title="Xem chi tiết dự án"
                 >
                     Chi tiết
@@ -283,12 +285,23 @@ export default function Tasks() {
     // ── Update progress ─────────────────────────────────────────────────────
     const handleSaveProgress = async (taskUuid, progress) => {
         setSaving(true);
+
         try {
             const res  = await apiFetch(`/tasks/${taskUuid}/progress/`, {
                 method: "PATCH",
-                body:   JSON.stringify({ progress }),
+                body: JSON.stringify({ progress }),
             });
+
             const data = await res.json();
+
+            if (!res.ok) {
+                const errorMessage =
+                    data.detail ||
+                    data.message ||
+                    Object.values(data)[0]?.[0];
+
+                throw new Error(errorMessage);
+            }
 
             // Optimistic update
             setTasks(prev => prev.map(t =>
@@ -296,14 +309,47 @@ export default function Tasks() {
                     ? { ...t, progress: data.progress, status: data.status }
                     : t
             ));
+
             setProgressTask(null);
+
             showToast(`Đã cập nhật ${progress}%`);
+
         } catch (e) {
             showToast(e.message, "error");
         } finally {
             setSaving(false);
         }
     };
+    // const handleSaveProgress = async (taskUuid, progress) => {
+    //     setSaving(true);
+    //     try {
+    //         const res  = await apiFetch(`/tasks/${taskUuid}/progress/`, {
+    //             method: "PATCH",
+    //             body:   JSON.stringify({ progress }),
+    //         });
+    //         const data = await res.json();
+    //         if (!res.ok) {
+    //             const errorMessage =
+    //                 data.detail ||
+    //                 data.message ||
+    //                 Object.values(data)[0]?.[0];
+
+    //             throw new Error(errorMessage);
+    //         }
+    //         // Optimistic update
+    //         setTasks(prev => prev.map(t =>
+    //             t.uuid === taskUuid
+    //                 ? { ...t, progress: data.progress, status: data.status }
+    //                 : t
+    //         ));
+    //         setProgressTask(null);
+    //         showToast(`Đã cập nhật ${progress}%`);
+    //     } catch (e) {
+    //         showToast(e.message, "error");
+    //     } finally {
+    //         setSaving(false);
+    //     }
+    // };
 
     // ── Toggle help ─────────────────────────────────────────────────────────
     const handleToggleHelp = async (task) => {
@@ -329,15 +375,19 @@ export default function Tasks() {
 
     // ── Filtered + sorted ───────────────────────────────────────────────────
     const processed = useMemo(() => {
-        const isOverdue = t => getDaysLeft(t.end_date) < 0 && computeStatus(t.progress, t.is_approved) !== "done";
+        const isOverdue = t => getDaysLeft(t.end_date) < 0 && t.status !== "done";
 
         let result = tasks.filter(t => {
             if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
             switch (activeFilter) {
-                case "todo":       return computeStatus(t.progress, t.is_approved) === "todo";
-                case "inprogress": return computeStatus(t.progress, t.is_approved) === "inprogress";
-                case "in_review":  return computeStatus(t.progress, t.is_approved) === "in_review";
-                case "done":       return computeStatus(t.progress, t.is_approved) === "done";
+                case "todo":       return t.status === "todo";
+                case "inprogress": return t.status === "inprogress";
+                case "in_review":  return t.status === "in_review";
+                case "done":       return t.status === "done";
+                // case "todo":       return computeStatus(t.progress, t.is_approved) === "todo";
+                // case "inprogress": return computeStatus(t.progress, t.is_approved) === "inprogress";
+                // case "in_review":  return computeStatus(t.progress, t.is_approved) === "in_review";
+                // case "done":       return computeStatus(t.progress, t.is_approved) === "done";
                 case "need_help":  return t.need_help;
                 case "overdue":    return isOverdue(t);
                 default:           return true;
@@ -359,25 +409,25 @@ export default function Tasks() {
 
     // ── Stats ───────────────────────────────────────────────────────────────
     const stats = useMemo(() => {
-        const isOverdue = t => getDaysLeft(t.end_date) < 0 && computeStatus(t.progress, t.is_approved) !== "done";
+        const isOverdue = t => getDaysLeft(t.end_date) < 0 && t.status !== "done";
         return {
             total:     tasks.length,
-            doing:     tasks.filter(t => { const s = computeStatus(t.progress, t.is_approved); return s === "inprogress"; }).length,
-            review:    tasks.filter(t => computeStatus(t.progress, t.is_approved) === "in_review").length,
+            doing:     tasks.filter(t => { const s = t.status; return s === "inprogress"; }).length,
+            review:    tasks.filter(t => t.status === "in_review").length,
             overdue:   tasks.filter(isOverdue).length,
             need_help: tasks.filter(t => t.need_help).length,
-            done:      tasks.filter(t => computeStatus(t.progress, t.is_approved) === "done").length,
+            done:      tasks.filter(t => t.status === "done").length,
         };
     }, [tasks]);
 
     const filterCount = (key) => {
-        const isOverdue = t => getDaysLeft(t.end_date) < 0 && computeStatus(t.progress, t.is_approved) !== "done";
+        const isOverdue = t => getDaysLeft(t.end_date) < 0 && t.status !== "done";
         switch (key) {
             case "all":        return tasks.length;
-            case "todo":       return tasks.filter(t => computeStatus(t.progress, t.is_approved) === "todo").length;
-            case "inprogress": return tasks.filter(t => computeStatus(t.progress, t.is_approved) === "inprogress").length;
-            case "in_review":  return tasks.filter(t => computeStatus(t.progress, t.is_approved) === "in_review").length;
-            case "done":       return tasks.filter(t => computeStatus(t.progress, t.is_approved) === "done").length;
+            case "todo":       return tasks.filter(t => t.status === "todo").length;
+            case "inprogress": return tasks.filter(t => t.status === "inprogress").length;
+            case "in_review":  return tasks.filter(t => t.status === "in_review").length;
+            case "done":       return tasks.filter(t => t.status === "done").length;
             case "need_help":  return tasks.filter(t => t.need_help).length;
             case "overdue":    return tasks.filter(isOverdue).length;
             default:           return 0;

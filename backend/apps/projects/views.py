@@ -36,6 +36,10 @@ from .serializers import (
     TaskOverviewSerializer
 )
 
+from datetime import timedelta
+
+from apps.tasks.models import TaskActivity
+from apps.tasks.serializers import TaskActivitySerializer
 
 class OverviewAPIView(APIView):
 
@@ -139,7 +143,23 @@ class OverviewAPIView(APIView):
 
             if 0 <= remaining_ratio <= 0.3:
                 ending_tasks.append(task)
+            # =========================================================
+            # RECENT ACTIVITIES
+            # =========================================================
 
+            one_week_ago = now - timedelta(days=7)
+
+            # activities = TaskActivity.objects.select_related(
+            #     "user",
+            #     "task",
+            #     "task__project",
+            # ).filter(
+            #     created_at__gte=one_week_ago
+            # ).order_by("-created_at")[:20]
+            activities = TaskActivity.objects.select_related(
+                "user__profile",
+                "task__project",
+            ).order_by("-created_at")[:20]
         # =========================================================
         # RESPONSE
         # =========================================================
@@ -161,6 +181,11 @@ class OverviewAPIView(APIView):
             "ending_tasks": TaskOverviewSerializer(
                 ending_tasks,
                 many=True
+            ).data,
+            "activities": TaskActivitySerializer(
+                activities,
+                many=True,
+                context={"request": request}
             ).data
         })
 def _leader_name(user) -> str:

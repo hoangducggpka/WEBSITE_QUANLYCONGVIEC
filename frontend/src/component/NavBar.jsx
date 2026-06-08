@@ -253,9 +253,56 @@ function NavBar() {
     const [openDropdown, setOpenDropdown]       = useState(false);
     const [openNotification, setOpenNotification] = useState(false);
     const [currentPage, setCurrentPage]         = useState(1);
-    const [unreadMessages]                      = useState(5);
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
     const { notifications, unreadCount, isLoading, hasMore, fetchNotifications, markRead, markAllRead, deleteAllRead } = useNotifications();
+
+    const chatWsRef = useRef(null);
+
+    useEffect(() => {
+        const token = localStorage.getItem("access");
+        if (!token) return;
+
+        const ws = new WebSocket(
+            `${WS_BASE}/ws/chat/global/?token=${token}`
+        );
+
+        chatWsRef.current = ws;
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.type === "unread_message") {
+
+                   console.log("[GLOBAL MESSAGE]", data); 
+                   setUnreadMessages(data.unread_count);
+
+                }
+
+            } catch (e) {
+                console.error("[GLOBAL CHAT WS]", e);
+            }
+        };
+
+        ws.onopen = () => {
+        console.log("[GLOBAL CHAT WS] connected");
+        };
+
+        ws.onclose = () => {
+        console.log("[GLOBAL CHAT WS] disconnected");
+        };
+
+        ws.onerror = (err) => {
+        console.error("[GLOBAL CHAT WS] error", err);
+        };
+
+
+        return () => ws.close();
+
+
+    }, []);
+
 
     const handleClick = (item) => {
         setActive(item);
@@ -363,8 +410,8 @@ function NavBar() {
                             {openDropdown && (
                                 <div className={styles.dropdown}>
                                     <button className={styles.dropdown_item} onClick={() => navigate("/profile")}>Hồ sơ</button>
-                                    <button className={styles.dropdown_item}>Cài đặt</button>
-                                    <button className={styles.dropdown_item}>Trợ giúp</button>
+                                    {/* <button className={styles.dropdown_item}>Cài đặt</button>
+                                    <button className={styles.dropdown_item}>Trợ giúp</button> */}
                                     <button className={styles.dropdown_item} onClick={() => { logout(); navigate("/login"); }}>Đăng xuất</button>
                                 </div>
                             )}

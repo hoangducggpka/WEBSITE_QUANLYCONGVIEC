@@ -1,10 +1,13 @@
 /* =========================================================
    PROJECT DETAIL — LIGHT PRODUCTIVITY WORKSPACE UI
-   v3 — Full feature with split modals & datetime display
+   v4 — Full feature: scroll XY, tooltip, warning, approve
 ========================================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
+/* =========================================================
+   PAGE SHELL
+========================================================= */
 .page {
     height: 100%;
     width: 98%;
@@ -22,7 +25,6 @@
 /* =========================================================
    TOP ROW
 ========================================================= */
-
 .topRow {
     width: 100%;
     display: flex;
@@ -32,7 +34,7 @@
     flex-shrink: 0;
 }
 
-/* LEFT PROJECT CARD */
+/* ── Project Card ── */
 .projectCard {
     flex: 1 1 auto;
     display: flex;
@@ -103,10 +105,10 @@
     white-space: nowrap;
     flex-shrink: 0;
 }
-.badgeGreen  { background: #dcfce7; color: #16a34a; }
-.badgeBlue   { background: #dbeafe; color: #2563eb; }
-.badgeAmber  { background: #fef3c7; color: #d97706; }
-.badgeRed    { background: #fee2e2; color: #dc2626; }
+.badgeGreen { background: #dcfce7; color: #16a34a; }
+.badgeBlue  { background: #dbeafe; color: #2563eb; }
+.badgeAmber { background: #fef3c7; color: #d97706; }
+.badgeRed   { background: #fee2e2; color: #dc2626; }
 
 .projectDesc {
     font-size: 11px;
@@ -129,7 +131,6 @@
     overflow: hidden;
 }
 
-/* ── Date group with arrow ── */
 .dateGroup {
     display: flex;
     align-items: center;
@@ -162,7 +163,6 @@
     white-space: nowrap;
 }
 
-/* Arrow between dates */
 .dateArrow {
     font-size: 14px;
     color: #cbd5e1;
@@ -170,7 +170,6 @@
     flex-shrink: 0;
 }
 
-/* Days left pill */
 .daysLeftPill {
     padding: 3px 8px;
     border-radius: 999px;
@@ -191,11 +190,10 @@
     border-radius: 8px;
     flex-shrink: 0;
 }
-.leaderMeta { display: flex; flex-direction: column; gap: 1px; }
-.leaderLabel { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #94a3b8; }
-.leaderName { font-size: 10px; font-weight: 600; color: #0f172a; }
+.leaderMeta   { display: flex; flex-direction: column; gap: 1px; }
+.leaderLabel  { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #94a3b8; }
+.leaderName   { font-size: 10px; font-weight: 600; color: #0f172a; }
 
-/* Edit project button */
 .editProjBtn {
     margin-left: auto;
     height: 26px;
@@ -213,7 +211,7 @@
     transition: 0.15s;
     flex-shrink: 0;
 }
-.editProjBtn svg { width: 11px; height: 11px; }
+.editProjBtn svg   { width: 11px; height: 11px; }
 .editProjBtn:hover { background: #4338ca; color: white; border-color: #4338ca; }
 
 .progressRow {
@@ -296,12 +294,12 @@
     color: #475569;
     cursor: pointer;
     transition: 0.15s;
-    position: relative;
     white-space: nowrap;
+    font-family: "DM Sans", sans-serif;
 }
-.actBtn svg { width: 12px; height: 12px; }
-.actBtn:hover { background: #f8fafc; border-color: #cbd5e1; }
-.actBtnPrimary { background: #4f46e5; border-color: #4f46e5; color: white; }
+.actBtn svg        { width: 12px; height: 12px; flex-shrink: 0; }
+.actBtn:hover      { background: #f8fafc; border-color: #cbd5e1; }
+.actBtnPrimary     { background: #4f46e5; border-color: #4f46e5; color: white; }
 .actBtnPrimary:hover { background: #4338ca; }
 
 .membersRowWrap {
@@ -312,20 +310,21 @@
     margin-bottom: 8px;
 }
 .memberAv {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
     overflow: hidden;
     cursor: pointer;
     transition: 0.15s;
     border: 2px solid transparent;
+    flex-shrink: 0;
 }
-.memberAv:hover { transform: scale(1.1); border-color: #6366f1; }
+.memberAv:hover { transform: scale(1.12); border-color: #6366f1; }
 
 .addMemberBtn {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
     border: 1px dashed #cbd5e1;
     background: #f8fafc;
     display: flex;
@@ -333,8 +332,10 @@
     justify-content: center;
     cursor: pointer;
     color: #64748b;
+    flex-shrink: 0;
+    transition: 0.15s;
 }
-.addMemberBtn svg { width: 13px; height: 13px; }
+.addMemberBtn svg  { width: 13px; height: 13px; }
 .addMemberBtn:hover { background: #eef2ff; border-color: #6366f1; color: #4f46e5; }
 
 .miniStats { display: flex; gap: 6px; }
@@ -346,8 +347,8 @@
     border: 1px solid #e2e8f0;
 }
 .miniStatLabel { font-size: 8px; color: #94a3b8; margin-bottom: 2px; }
-.miniStatVal { font-size: 13px; font-weight: 700; }
-.miniStatSub { font-size: 8px; color: #94a3b8; }
+.miniStatVal   { font-size: 13px; font-weight: 700; }
+.miniStatSub   { font-size: 8px; color: #94a3b8; }
 
 /* =========================================================
    STATS ROW
@@ -407,11 +408,12 @@
     gap: 6px;
     margin-bottom: 8px;
     flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .searchBox {
     height: 32px;
-    min-width: 160px;
+    min-width: 140px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -428,7 +430,8 @@
     background: transparent;
     font-size: 11px;
     color: #0f172a;
-    min-width: 80px;
+    min-width: 70px;
+    font-family: "DM Sans", sans-serif;
 }
 .searchBox input::placeholder { color: #94a3b8; }
 
@@ -444,9 +447,10 @@
     cursor: pointer;
     white-space: nowrap;
     transition: 0.15s;
+    font-family: "DM Sans", sans-serif;
 }
-.filterBtn:hover { background: #f8fafc; }
-.filterBtnActive { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
+.filterBtn:hover     { background: #f8fafc; }
+.filterBtnActive     { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
 
 .scaleGroup {
     display: flex;
@@ -454,6 +458,7 @@
     background: #f1f5f9;
     border-radius: 8px;
     padding: 2px;
+    flex-shrink: 0;
 }
 .scaleBtn {
     height: 26px;
@@ -467,6 +472,7 @@
     cursor: pointer;
     transition: 0.15s;
     white-space: nowrap;
+    font-family: "DM Sans", sans-serif;
 }
 .scaleBtnActive {
     background: white;
@@ -478,6 +484,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    flex-shrink: 0;
 }
 .navBtn {
     width: 28px;
@@ -510,29 +517,32 @@
     cursor: pointer;
     transition: 0.15s;
     margin-left: auto;
+    flex-shrink: 0;
 }
 .expandBtn svg { width: 14px; height: 14px; }
 .expandBtn:hover { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
 
 /* =========================================================
-   GANTT TABLE
+   GANTT TABLE — scroll both X and Y
 ========================================================= */
 .tlScrollWrap {
     flex: 1;
-    overflow: auto;
+    min-height: 0;          /* critical: lets flex child shrink + scroll */
+    overflow: auto;          /* scroll BOTH x and y */
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
 }
-.tlScrollWrap::-webkit-scrollbar { width: 5px; height: 5px; }
-.tlScrollWrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.tlScrollWrap::-webkit-scrollbar        { width: 6px; height: 6px; }
+.tlScrollWrap::-webkit-scrollbar-track  { background: transparent; }
+.tlScrollWrap::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 999px; }
+.tlScrollWrap::-webkit-scrollbar-corner { background: transparent; }
 
 .ganttTable {
-    width: 100%;
-    min-width: 900px;
     border-collapse: collapse;
     table-layout: fixed;
+    /* width is set inline; don't set 100% here so horizontal scroll works */
 }
 
 .ganttHead {
@@ -551,34 +561,38 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
     text-align: center;
+    white-space: nowrap;
 }
 
 .todayHeader { color: #4338ca !important; background: #eef2ff; }
 
-.ganttRow { border-bottom: 1px solid #f1f5f9; }
-.ganttRow:hover { background: #fafbff; }
+.ganttRow        { border-bottom: 1px solid #f1f5f9; }
+.ganttRow:hover  { background: #fafbff; }
 
 .memberCell {
     position: sticky;
     left: 0;
     z-index: 10;
-    min-width: 150px;
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
     padding: 8px 10px;
     background: white;
     border-right: 1px solid #eef2f7;
     display: flex;
     align-items: center;
     gap: 8px;
+    box-sizing: border-box;
 }
 .ganttRow:hover .memberCell { background: #fafbff; }
 
-.memberInfo .mName { font-size: 10px; font-weight: 700; color: #0f172a; }
-.memberInfo .mRole { font-size: 9px; color: #94a3b8; }
+.memberInfo .mName { font-size: 10px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.memberInfo .mRole { font-size: 9px; color: #94a3b8; white-space: nowrap; }
 
 .dayCell {
     position: relative;
-    height: 70px;
     border-left: 1px solid #f1f5f9;
+    /* height is set inline */
 }
 
 /* =========================================================
@@ -601,6 +615,7 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 20;
+    overflow: visible;
 }
 
 .barName {
@@ -643,7 +658,7 @@
     height: 20px;
     border-radius: 5px;
     border: none;
-    background: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.88);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -652,9 +667,14 @@
     cursor: pointer;
     transition: 0.15s;
 }
-.taskActBtn svg { width: 10px; height: 10px; }
-.taskActBtn:hover { background: white; color: #4f46e5; }
+.taskActBtn svg       { width: 10px; height: 10px; }
+.taskActBtn:hover     { background: white; color: #4f46e5; }
 .taskActBtnDanger:hover { color: #dc2626; }
+
+/* =========================================================
+   TASK TOOLTIP  (rendered via fixed position in JSX)
+========================================================= */
+/* No module class needed — all inline styles in TaskTooltip component */
 
 /* =========================================================
    MODAL
@@ -669,7 +689,7 @@
     z-index: 200;
     opacity: 0;
     pointer-events: none;
-    transition: 0.2s;
+    transition: opacity 0.2s;
 }
 .modalOverlay.open { opacity: 1; pointer-events: auto; }
 
@@ -683,11 +703,10 @@
     border-radius: 16px;
     border: 1px solid #dbe3ec;
     transform: scale(0.96);
-    transition: 0.2s;
+    transition: transform 0.2s;
     overflow: hidden;
 }
 .modalWide      { max-width: 640px; }
-/* Ultra-wide for split-layout modals */
 .modalUltraWide { max-width: 860px; width: 95%; }
 
 .modalOverlay.open .modal { transform: scale(1); }
@@ -707,6 +726,7 @@
     font-size: 15px;
     font-weight: 700;
     color: #0f172a;
+    margin: 0;
 }
 .modalHeader h2 svg { width: 15px; height: 15px; }
 
@@ -721,9 +741,10 @@
     justify-content: center;
     cursor: pointer;
     color: #64748b;
+    transition: 0.15s;
 }
-.modalClose svg { width: 14px; height: 14px; }
-.modalClose:hover { background: #f8fafc; }
+.modalClose svg        { width: 14px; height: 14px; }
+.modalClose:hover      { background: #f8fafc; }
 
 .modalBody {
     flex: 1;
@@ -732,7 +753,7 @@
     scrollbar-width: thin;
     scrollbar-color: #e2e8f0 transparent;
 }
-.modalBody::-webkit-scrollbar { width: 4px; }
+.modalBody::-webkit-scrollbar       { width: 4px; }
 .modalBody::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
 
 .modalFooter {
@@ -746,7 +767,7 @@
 }
 
 /* =========================================================
-   SPLIT LAYOUT — for wide modals (CreateTask, Members)
+   SPLIT LAYOUT — wide modals
 ========================================================= */
 .splitLayout {
     display: flex;
@@ -755,7 +776,6 @@
     max-height: 60vh;
 }
 
-/* Left panel — takes more space for task info */
 .splitLeft {
     flex: 0 0 52%;
     min-width: 0;
@@ -766,10 +786,9 @@
     scrollbar-width: thin;
     scrollbar-color: #e2e8f0 transparent;
 }
-.splitLeft::-webkit-scrollbar { width: 3px; }
+.splitLeft::-webkit-scrollbar       { width: 3px; }
 .splitLeft::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
 
-/* Right panel — member list */
 .splitRight {
     flex: 1;
     min-width: 0;
@@ -780,10 +799,9 @@
     scrollbar-width: thin;
     scrollbar-color: #e2e8f0 transparent;
 }
-.splitRight::-webkit-scrollbar { width: 3px; }
+.splitRight::-webkit-scrollbar       { width: 3px; }
 .splitRight::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
 
-/* Vertical divider between panels */
 .splitDivider {
     flex-shrink: 0;
     width: 1px;
@@ -795,7 +813,7 @@
 /* =========================================================
    FORMS
 ========================================================= */
-.formGroup { margin-bottom: 12px; }
+.formGroup   { margin-bottom: 12px; }
 .formLabel {
     display: block;
     margin-bottom: 5px;
@@ -822,10 +840,11 @@
 }
 .formInput:focus,
 .formSelect:focus,
-.formTextarea:focus { border-color: #6366f1; background: white; }
-.formTextarea { resize: vertical; min-height: 72px; line-height: 1.6; }
-.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.formTextarea:focus  { border-color: #6366f1; background: white; }
+.formTextarea        { resize: vertical; min-height: 72px; line-height: 1.6; }
+.formRow             { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
+/* ── Buttons ── */
 .btn {
     height: 36px;
     padding: 0 16px;
@@ -838,13 +857,14 @@
     cursor: pointer;
     font-family: "DM Sans", sans-serif;
     transition: 0.15s;
+    border: none;
 }
-.btnGhost { background: white; border: 1px solid #dbe3ec; color: #475569; }
+.btnGhost   { background: white; border: 1px solid #dbe3ec; color: #475569; }
 .btnGhost:hover { background: #f8fafc; }
-.btnPrimary { border: none; background: #4f46e5; color: white; }
+.btnPrimary { background: #4f46e5; color: white; }
 .btnPrimary:hover:not(:disabled) { background: #4338ca; }
 .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btnDanger { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+.btnDanger  { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
 
 /* =========================================================
    MEMBERS MODAL
@@ -862,12 +882,12 @@
 }
 .memberListItem:hover { background: #fafbff; border-color: #c7d2fe; }
 
-.mliBody { flex: 1; min-width: 0; }
-.mliName { font-size: 12px; font-weight: 700; color: #0f172a; }
-.mliRole { font-size: 10px; color: #64748b; margin-bottom: 3px; }
+.mliBody  { flex: 1; min-width: 0; }
+.mliName  { font-size: 12px; font-weight: 700; color: #0f172a; }
+.mliRole  { font-size: 10px; color: #64748b; margin-bottom: 3px; }
 
 .skillTags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-.skillTag {
+.skillTag  {
     padding: 2px 6px;
     border-radius: 999px;
     background: #f1f5f9;
@@ -881,13 +901,7 @@
 /* =========================================================
    COMMENTS MODAL
 ========================================================= */
-.commentItem {
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    background: white;
-    margin-bottom: 8px;
-}
+.commentItem       { padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: white; margin-bottom: 8px; }
 .commentItemPinned { border-color: #c7d2fe; background: #eef2ff; }
 
 .pinnedBadge {
@@ -902,22 +916,12 @@
 }
 .pinnedBadge svg { width: 10px; height: 10px; }
 
-.commentHeader {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-.commentAuthor { font-size: 11px; font-weight: 700; color: #0f172a; }
-.commentTime { margin-left: auto; font-size: 9px; color: #94a3b8; }
-.commentText { font-size: 11px; line-height: 1.6; color: #334155; }
+.commentHeader  { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.commentAuthor  { font-size: 11px; font-weight: 700; color: #0f172a; }
+.commentTime    { margin-left: auto; font-size: 9px; color: #94a3b8; }
+.commentText    { font-size: 11px; line-height: 1.6; color: #334155; }
 
-.commentActionsRow {
-    display: flex;
-    gap: 2px;
-    margin-top: 8px;
-    align-items: center;
-}
+.commentActionsRow { display: flex; gap: 2px; margin-top: 8px; align-items: center; }
 .commentActBtn {
     width: 28px;
     height: 28px;
@@ -932,9 +936,9 @@
     transition: 0.15s;
     flex-shrink: 0;
 }
-.commentActBtn svg { width: 12px; height: 12px; }
-.commentActBtn:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
-.commentActBtnActive { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.commentActBtn svg     { width: 12px; height: 12px; }
+.commentActBtn:hover   { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
+.commentActBtnActive   { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
 .commentActBtnDanger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
 .replyIndent {
@@ -947,7 +951,7 @@
 }
 .replyHeader { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .replyAuthor { font-size: 10px; font-weight: 700; color: #0f172a; }
-.replyText { font-size: 10px; line-height: 1.5; color: #64748b; }
+.replyText   { font-size: 10px; line-height: 1.5; color: #64748b; }
 
 .commentSendBtn {
     height: 38px;
@@ -963,9 +967,11 @@
     font-weight: 600;
     cursor: pointer;
     font-family: "DM Sans", sans-serif;
+    transition: 0.15s;
+    flex-shrink: 0;
 }
-.commentSendBtn svg { width: 12px; height: 12px; }
-.commentSendBtn:hover { background: #4338ca; }
+.commentSendBtn svg    { width: 12px; height: 12px; }
+.commentSendBtn:hover  { background: #4338ca; }
 
 /* =========================================================
    TOAST
@@ -988,7 +994,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    font-family: "DM Sans", sans-serif;
 }
-.toast svg { width: 14px; height: 14px; color: #22c55e; }
-.toastShow { opacity: 1; transform: translateY(0); }
-
+.toast svg  { width: 14px; height: 14px; color: #22c55e; }
+.toastShow  { opacity: 1; transform: translateY(0); }

@@ -27,14 +27,80 @@ from .serializers import (
     UpdateTaskStatusSerializer,
     UserTaskListSerializer,
     WarningTaskSerializer,
+    TaskActivitySerializer
 )
 from .utils import update_project_progress, broadcast_project_progress, broadcast_task_progress
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper
-# ─────────────────────────────────────────────────────────────────────────────
-
+class TaskActivityListView(APIView):
+    """
+    GET /tasks/activity/
+    Query params:
+      - limit  (int, default=20, max=100)
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def get(self, request):
+ 
+        limit = min(
+            int(request.query_params.get("limit", 20)),
+            100,
+        )
+ 
+        activities = (
+            TaskActivity.objects
+            .select_related(
+                "user__profile",
+                "task__project",
+            )
+            .order_by("-created_at")[:limit]
+        )
+ 
+        from .serializers import TaskActivitySerializer
+        serializer = TaskActivitySerializer(
+            activities,
+            many=True,
+            context={"request": request},
+        )
+ 
+        return Response(serializer.data)
+ 
+ 
+class TaskActivityDeleteView(APIView):
+    """
+    DELETE /projects/activity/<activity_id>/delete/
+    Chỉ owner hoặc leader của project mới được xóa.
+    """
+    permission_classes = [IsAuthenticated]
+ 
+    def delete(self, request, activity_id):
+ 
+        try:
+            activity = TaskActivity.objects.select_related(
+                "user",
+                "task__project__group",
+            ).get(id=activity_id)
+ 
+        except TaskActivity.DoesNotExist:
+            return Response(
+                {"detail": "Activity not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+ 
+        is_owner  = activity.user == request.user
+        is_leader = (
+            hasattr(activity.task.project, "group")
+            and activity.task.project.group.leader == request.user
+        )
+ 
+        if not (is_owner or is_leader):
+            return Response(
+                {"detail": "Permission denied."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+ 
+        activity.delete()
+ 
+        return Response(status=status.HTTP_204_NO_CONTENT)
 def _leader_name(user) -> str:
     profile = getattr(user, "profile", None)
     return profile.fullname if profile and profile.fullname else user.username
@@ -376,81 +442,97 @@ class UpdateTaskProgressView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, task_uuid):
-        now = timezone.localtime()
 
         try:
             task = Task.objects.select_related(
-                "project__group", "assigned_to__group_member__user"
+                "project__group",
+                "assigned_to__group_member__user"
             ).get(uuid=task_uuid)
+
         except Task.DoesNotExist:
-            return Response({"error": "Task not found"}, status=404)
+            return Response(
+                {"detail": "Task không tồn tại"},
+                status=404
+            )
 
-        # Permission: only the assigned member
-        if not task.assigned_to or task.assigned_to.group_member.user != request.user:
-            return Response({"error": "You are not assigned to this task"}, status=403)
+        # Permission
+        if (
+            not task.assigned_to
+            or task.assigned_to.group_member.user != request.user
+        ):
+            return Response(
+                {"detail": "Bạn không được assigned task này"},
+                status=403
+            )
 
-        if task.is_approved:
-            return Response({"error": "Task đã được approve, không thể cập nhật"}, status=400)
+        serializer = UpdateTaskProgressSerializer(
+            data=request.data,
+            context={"task": task},
+        )
 
-        proj_status = task.project.computed_status
-        if proj_status == "preparing":
-            return Response({"error": "Dự án chưa bắt đầu"}, status=403)
-        if proj_status == "finished":
-            return Response({"error": "Dự án đã kết thúc"}, status=403)
-
-        if task.end_date and timezone.localtime(task.end_date) < now:
-            return Response({"error": "Task đã quá thời hạn, không thể cập nhật"}, status=403)
-
-        serializer = UpdateTaskProgressSerializer(data=request.data, context={"task": task})
         serializer.is_valid(raise_exception=True)
 
         old_progress = task.progress
         new_progress = serializer.validated_data["progress"]
 
         task.progress = new_progress
-        # status is auto-synced inside Task.save()
         task.save()
 
-        # Log activity
-        # TaskActivity.objects.create(
-        #     task      = task,
-        #     user      = request.user,
-        #     action    = "progress_updated",
-        #     old_value = str(old_progress),
-        #     new_value = str(new_progress),
-        # )
+        # Activity
         TaskActivityService.create_activity(
             task=task,
             user=request.user,
-            action="progress_updated",
+            action=f"Cập nhật tiến trình ({task.progress}%)",
             old_value=str(old_progress),
             new_value=str(task.progress),
         )
-        # Notify leader if submitted for review (progress hits 100)
+
+        # Notify review
         if new_progress == 100 and old_progress < 100:
+
             leader = task.project.group.leader
             member_name = _leader_name(request.user)
+
             Notification.objects.create(
-                user    = leader,
-                content = f"{member_name} | {task.project.group.name} | {member_name} đã hoàn thành công việc '{task.name}', đang chờ duyệt",
-                project = task.project,
-                priority = 2,
+                user=leader,
+                content=(
+                    f"{member_name} | "
+                    f"{task.project.group.name} | "
+                    f"{member_name} đã hoàn thành "
+                    f"công việc '{task.name}', đang chờ duyệt"
+                ),
+                project=task.project,
+                priority=2,
             )
 
-        # Broadcast task progress via WebSocket
-        broadcast_task_progress(task.uuid, new_progress, task.computed_status)
+        # WS task
+        broadcast_task_progress(
+            task.uuid,
+            task.progress,
+            task.computed_status
+        )
 
-        # Recalculate + broadcast project progress
+        # WS project
         progress = update_project_progress(task.project)
-        broadcast_project_progress(task.project.uuid, progress)
+
+        broadcast_project_progress(
+            task.project.uuid,
+            progress
+        )
 
         return Response({
-            "message"          : "Tiến độ đã được cập nhật",
-            "task_uuid"        : str(task.uuid),
-            "progress"         : task.progress,
-            "status"           : task.computed_status,
-            "project_progress" : progress,
-        }, status=200)
+            "message": (
+                "Task đã được gửi chờ duyệt"
+                if new_progress == 100
+                else "Tiến độ đã được cập nhật"
+            ),
+
+            "task_uuid": str(task.uuid),
+            "progress": task.progress,
+            "status": task.computed_status,
+            "is_approved": task.is_approved,
+            "project_progress": progress,
+        })
 
 
 # ─────────────────────────────────────────────────────────────────────────────

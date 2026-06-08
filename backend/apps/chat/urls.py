@@ -9,12 +9,17 @@ from .views import (
     UnpinMessageView,
     RecallMessageView,
     MessageReactionView,
+    MarkConversationReadView
 )
 
 urlpatterns = [
     # Conversations
     path("conversations/",         ConversationListView.as_view()),
     path("conversations/group/",   GroupConversationView.as_view()),
+    path(
+        "conversations/<uuid:conversation_uuid>/read/",
+        MarkConversationReadView.as_view()
+    ),
 
     # Messages
     path("conversations/<uuid:conversation_uuid>/messages/",   MessageListView.as_view()),

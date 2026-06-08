@@ -63,6 +63,7 @@ def _build_avatar(request, profile):
     return None
 
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Task detail (used inside ProjectDetailSerializer)
 # ─────────────────────────────────────────────────────────────────────────────

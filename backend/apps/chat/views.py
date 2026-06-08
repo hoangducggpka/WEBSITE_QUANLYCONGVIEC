@@ -18,6 +18,35 @@ from apps.chat.services.chat_service import (
 # Conversations
 # ─────────────────────────────────────────────
 
+# apps/chat/views.py
+
+
+class MarkConversationReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, conversation_uuid):
+
+        try:
+            conv = Conversation.objects.get(uuid=conversation_uuid)
+
+            member = ConversationMember.objects.get(
+                conversation=conv,
+                user=request.user
+            )
+
+            member.last_seen = timezone.now()
+            member.save(update_fields=["last_seen"])
+
+            return Response({
+                "success": True
+            })
+
+        except Conversation.DoesNotExist:
+            return Response({"detail": "Conversation not found"}, status=404)
+
+        except ConversationMember.DoesNotExist:
+            return Response({"detail": "Not member"}, status=403)
+
 class ConversationListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -308,158 +337,3 @@ class MessageReactionView(APIView):
         )
 
         return Response({"action": action, "reactions": reactions_data})
-# # apps/chat/views.py
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import IsAuthenticated
-# from rest_framework import status
-# from django.contrib.auth.models import User
-# from django.utils import timezone
-
-# from .models import Conversation, ConversationMember, Message
-# from .serializers import ConversationSerializer, MessageSerializer
-# from apps.chat.services.chat_service import get_or_create_private_conversation
-
-# from apps.chat.services.chat_service import (
-#     get_or_create_private_conversation,
-#     get_or_create_group_conversation
-# )
-# class ConversationListView(APIView):
-#     """
-#     GET  /api/chat/conversations/         → Danh sách conversation của user
-#     POST /api/chat/conversations/         → Tạo private conversation với 1 user
-#     """
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         conversations = Conversation.objects.filter(
-#             members__user=request.user
-#         ).select_related("group").prefetch_related(
-#             "members__user__profile", "messages"
-#         ).order_by("-created_at")
-
-#         serializer = ConversationSerializer(
-#             conversations, many=True, context={"request": request}
-#         )
-#         return Response(serializer.data)
-#     def post(self, request):
-#         target_user_id = request.data.get("user_id")
-
-#         target_user = User.objects.get(id=target_user_id)
-
-#         conv = get_or_create_private_conversation(
-#             request.user,
-#             target_user
-#         )
-
-#         serializer = ConversationSerializer(conv, context={"request": request})
-#         return Response(serializer.data)
-#     # def post(self, request):
-#     #     target_user_id = request.data.get("user_id")
-#     #     if not target_user_id:
-#     #         return Response({"error": "user_id required"}, status=400)
-
-#     #     try:
-#     #         target_user = User.objects.get(id=target_user_id)
-#     #     except User.DoesNotExist:
-#     #         return Response({"error": "User not found"}, status=404)
-
-#     #     # Kiểm tra đã có conversation private chưa
-#     #     existing = Conversation.objects.filter(
-#     #         type="private",
-#     #         members__user=request.user
-#     #     ).filter(
-#     #         members__user=target_user
-#     #     ).first()
-
-#     #     if existing:
-#     #         serializer = ConversationSerializer(existing, context={"request": request})
-#     #         return Response(serializer.data)
-
-#     #     # Tạo mới
-#     #     conv = Conversation.objects.create(type="private")
-#     #     ConversationMember.objects.create(conversation=conv, user=request.user)
-#     #     ConversationMember.objects.create(conversation=conv, user=target_user)
-
-#     #     serializer = ConversationSerializer(conv, context={"request": request})
-#     #     return Response(serializer.data, status=201)
-
-
-# class GroupConversationView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     def post(self, request):
-#         from apps.groups.models import Group
-#         from apps.chat.services.chat_service import get_or_create_group_conversation
-
-#         group = Group.objects.prefetch_related("members__user").get(
-#             id=request.data["group_id"]
-#         )
-
-#         conv = get_or_create_group_conversation(group)
-
-#         serializer = ConversationSerializer(conv, context={"request": request})
-#         return Response(serializer.data)
-#     # def post(self, request):
-#     #     from apps.groups.models import Group
-
-#     #     group_id = request.data.get("group_id")
-#     #     try:
-#     #         group = Group.objects.prefetch_related("members__user").get(id=group_id)
-#     #     except Group.DoesNotExist:
-#     #         return Response({"error": "Group not found"}, status=404)
-
-#     #     # Tạo hoặc lấy conversation đã có cho group này
-#     #     conv, created = Conversation.objects.get_or_create(
-#     #         type="group",
-#     #         group=group,
-#     #     )
-
-#     #     if created:
-#     #         # Thêm leader + tất cả members
-#     #         all_users = set()
-#     #         all_users.add(group.leader)
-#     #         for m in group.members.all():
-#     #             all_users.add(m.user)
-#     #         for u in all_users:
-#     #             ConversationMember.objects.get_or_create(conversation=conv, user=u)
-
-#     #     serializer = ConversationSerializer(conv, context={"request": request})
-#     #     return Response(serializer.data, status=201 if created else 200)
-
-
-# class MessageListView(APIView):
-#     """
-#     GET /api/chat/conversations/<uuid>/messages/   → Load lịch sử chat (phân trang)
-#     """
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request, conversation_uuid):
-#         try:
-#             conv = Conversation.objects.get(uuid=conversation_uuid)
-#         except Conversation.DoesNotExist:
-#             return Response({"error": "Not found"}, status=404)
-
-#         # Kiểm tra quyền
-#         if not conv.members.filter(user=request.user).exists():
-#             return Response({"error": "Forbidden"}, status=403)
-
-#         # Cập nhật last_seen
-#         ConversationMember.objects.filter(
-#             conversation=conv, user=request.user
-#         ).update(last_seen=timezone.now())
-
-#         # Phân trang đơn giản: ?before=<message_id>
-#         before_id = request.query_params.get("before")
-#         messages = conv.messages.filter(is_deleted=False).select_related(
-#             "sender__profile"
-#         ).order_by("-created_at")
-
-#         if before_id:
-#             messages = messages.filter(id__lt=before_id)
-
-#         messages = messages[:50]  # 50 tin mỗi lần
-
-#         serializer = MessageSerializer(
-#             reversed(list(messages)), many=True, context={"request": request}
-#         )
-#         return Response(serializer.data)
