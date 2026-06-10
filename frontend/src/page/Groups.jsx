@@ -166,8 +166,7 @@ function CreateGroupModal({ onClose, onCreated }) {
         onCreated(data.group_uuid);
       } else {
         setError(
-          data?.name?.[0] ||
-          data?.error     ||
+          data?.message?.[0] ||
           "Tạo nhóm thất bại, vui lòng thử lại"
         );
       }
@@ -259,15 +258,10 @@ function AddMemberModal({ group, onClose, onSuccess }) {
         onSuccess();
         onClose();
       } else {
-        setError(
-          data?.error          ||
-          data?.username?.[0]  ||
-          Object.values(data)?.[0]?.[0] ||
-          "Thêm thành viên thất bại"
-        );
+        setError(data?.error || "Có lỗi xảy ra");
       }
     } catch {
-      setError("Lỗi kết nối server");
+      setError("Có lỗi xảy ra! Vui lòng kiển tra lại.");
     } finally {
       setLoading(false);
     }
@@ -544,37 +538,7 @@ function Groups() {
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
-  // ── Debounced search (onChange, 350ms) ────────────────────
-  // useEffect(() => {
-  //   clearTimeout(searchTimer.current);
 
-  //   if (!searchQuery.trim()) {
-  //     setSearchResults([]);
-  //     return;
-  //   }
-
-  //   searchTimer.current = setTimeout(async () => {
-  //     setSearching(true);
-  //     try {
-  //       const res = await apiFetch(`/groups/search/`, {
-  //         method:  "POST",
-  //         headers: {},
-  //         body:    JSON.stringify({ keyword: searchQuery }),
-  //       });
-  //       if (res.ok) {
-  //         setSearchResults(await res.json());
-  //         console.log("REQUEST:", searchQuery);
-  //         console.log("RESULT:", searchResults);
-  //       }
-  //       } catch {
-  //       /* silent */
-  //     } finally {
-  //       setSearching(false);
-  //     }
-  //   }, 350);
-
-  //   return () => clearTimeout(searchTimer.current);
-  // }, [searchQuery]);
 
   const handleSearch = async () => {
     const q = searchQuery.trim();

@@ -140,16 +140,32 @@ class ConversationSerializer(serializers.ModelSerializer):
                 else other.user.username
             )
         return "Unknown"
-
     def get_display_avatar(self, obj):
         request = self.context.get("request")
         if obj.type == "group":
+            # Lấy avatar của leader
+            if obj.group and obj.group.leader:
+                leader = obj.group.leader
+                if hasattr(leader, "profile") and leader.profile.avatarpath:
+                    url = leader.profile.avatarpath.url
+                    return request.build_absolute_uri(url) if request else url
             return None
+        # Private: avatar người kia
         other = self._get_other_member(obj)
         if other and hasattr(other.user, "profile") and other.user.profile.avatarpath:
             url = other.user.profile.avatarpath.url
             return request.build_absolute_uri(url) if request else url
         return None
+
+    # def get_display_avatar(self, obj):
+    #     request = self.context.get("request")
+    #     if obj.type == "group":
+    #         return None
+    #     other = self._get_other_member(obj)
+    #     if other and hasattr(other.user, "profile") and other.user.profile.avatarpath:
+    #         url = other.user.profile.avatarpath.url
+    #         return request.build_absolute_uri(url) if request else url
+    #     return None
 
     def get_members(self, obj):
         users = [m.user for m in obj.members.select_related("user__profile").all()]

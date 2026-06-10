@@ -27,13 +27,13 @@ class RequestSecurityMiddleware:
                 status=403
             )
         
-        if is_ip_blocked(ip):
-            return JsonResponse(
-                {
-                    "error": "IP temporarily blocked"
-                },
-                status=403
-            )
+        # if is_ip_blocked(ip):
+        #     return JsonResponse(
+        #         {
+        #             "error": "IP temporarily blocked"
+        #         },
+        #         status=403
+        #     )
 
         response = self.get_response(request)
 

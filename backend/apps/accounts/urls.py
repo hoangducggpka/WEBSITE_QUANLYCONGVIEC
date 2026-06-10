@@ -3,10 +3,11 @@ from django.urls import path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
+
     # RequestPasswordResetView,
     # ResetPasswordConfirmView
 )
-from .views import RegisterView, LogoutView, MyProfileView, ProfileUpdateView, AvatarUpdateView
+from .views import RegisterView, LogoutView, MyProfileView, ProfileUpdateView, AvatarUpdateView,     ChangePasswordView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -16,6 +17,7 @@ urlpatterns = [
     path("me/", MyProfileView.as_view(), name="my_profile"),
     path("profile/", ProfileUpdateView.as_view(), name="update_profile"),
     path("profile/avatar/", AvatarUpdateView.as_view(), name="update_profile_avatar"),
+    path("change-password/", ChangePasswordView.as_view(), name="change_password"),
     # path(
     #     "password/request-reset/",
     #     RequestPasswordResetView.as_view(),

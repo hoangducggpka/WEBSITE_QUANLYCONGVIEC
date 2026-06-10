@@ -12,8 +12,14 @@ import {
 } from "react-icons/ri";
 import { apiFetch } from "../utils/api";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+const API_BASE = "http://127.0.0.1:8000";
 const WS_BASE  = import.meta.env.VITE_WS_URL  ?? "ws://127.0.0.1:8000";
+
+const toAbsUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;   // đã absolute rồi
+    return `${API_BASE}${url}`;
+};
 
 const EMOJI_LIST = ["👍","❤️","😂","😮","😢","😡","🎉","🔥","👏","✅"];
 
@@ -608,9 +614,22 @@ function Messages() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.04, duration: 0.2 }}
                         >
-                            <div className={styles.avatar_wrapper}>
-                                <img src={item.display_avatar ?? "/default-avatar.png"} alt="avatar" className={styles.avatar} />
+                            {/* <div className={styles.avatar_wrapper}>
+                                <img src={toAbsUrl(item.display_avatar) ?? "/5.png"} alt="avatar" className={styles.avatar} />
                                 {item.type === "private" && <span className={styles.online_dot}></span>}
+                            </div> */}
+                            <div className={styles.avatar_wrapper}>
+                                <img
+                                    src={toAbsUrl(item.display_avatar) ?? "/5.png"}
+                                    alt="avatar"
+                                    className={styles.avatar}
+                                />
+                                {item.type === "private" && <span className={styles.online_dot}></span>}
+                                {item.type === "group" && (
+                                    <span className={styles.member_count_badge}>
+                                        {item.members?.length ?? 0}
+                                    </span>
+                                )}
                             </div>
                             <div className={styles.conversation_content}>
                                 <div className={styles.conversation_top}>
@@ -642,7 +661,7 @@ function Messages() {
                         <div className={styles.chat_header}>
                             <div className={styles.chat_user}>
                                 <div className={styles.avatar_wrapper}>
-                                    <img src={activeConversation.display_avatar ?? "/default-avatar.png"} alt="avatar" className={styles.avatar} />
+                                    <img src={activeConversation.display_avatar ?? "/5.png"} alt="avatar" className={styles.avatar} />
                                     {activeConversation.type === "private" && <span className={styles.online_dot}></span>}
                                 </div>
                                 <div>
@@ -734,7 +753,7 @@ function Messages() {
                                             >
                                                 {!isMe && (
                                                     <img
-                                                        src={message.sender_avatar ?? "/default-avatar.png"}
+                                                        src={toAbsUrl(message.sender_avatar) ?? "/5.png"}
                                                         alt={message.sender_name}
                                                         className={styles.message_avatar}
                                                     />

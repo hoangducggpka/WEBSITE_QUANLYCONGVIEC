@@ -13,7 +13,6 @@ import ProjectDetail from "./page/ProjectDetail";
 import GroupDetail from "./page/GroupDetail";
 import Tasks from "./page/Tasks";
 import { useEffect } from "react";
-import SecurityDashboard from "./page/SecurityDashboard";
 
 
 const MainLayout = () => {

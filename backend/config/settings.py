@@ -107,6 +107,9 @@ TEMPLATES = [
         },
     },
 ]
+SITE_URL = "http://localhost:8000"  
+TELEGRAM_BOT_TOKEN = "8854610354:AAGU70AY9Qv2cRCCVxufE1v5xZlDwzt3sEU"
+TELEGRAM_CHAT_ID = "7284151643"
 
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
@@ -129,12 +132,17 @@ CHANNEL_LAYERS = {
 }
 
 # Django REST Framework config
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.IsAuthenticated',
+#     ),
+# }
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        'apps.security.authentication.SecurityJWTAuthentication',
     ),
 }
 

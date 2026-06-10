@@ -1,5 +1,6 @@
+#apps/security/services
 from apps.security.models import SecurityEvent
-
+from apps.security.alerts.dispatcher import dispatch_security_alert
 
 def create_security_event(
     *,
@@ -12,7 +13,7 @@ def create_security_event(
     metadata=None
 ):
 
-    return SecurityEvent.objects.create(
+    event = SecurityEvent.objects.create(
         user=user,
         ip_address=ip_address,
         endpoint=endpoint,
@@ -21,3 +22,8 @@ def create_security_event(
         description=description,
         metadata=metadata or {}
     )
+
+    # 👉 TRIGGER ALERT HERE
+    dispatch_security_alert(event)
+
+    return event

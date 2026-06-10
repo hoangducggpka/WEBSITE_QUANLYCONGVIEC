@@ -12,9 +12,49 @@ from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 
-
+from django.contrib.auth import authenticate
 
 RESET_CODES = {}
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current_password = request.data.get("current_password")
+        new_password      = request.data.get("new_password")
+        email             = request.data.get("email")
+
+        if not all([current_password, new_password, email]):
+            return Response(
+                {"error": "Vui lòng điền đầy đủ thông tin"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Xác minh email khớp với tài khoản
+        if request.user.email != email:
+            return Response(
+                {"error": "Email không khớp với tài khoản"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Xác minh mật khẩu hiện tại
+        user = authenticate(username=request.user.username, password=current_password)
+        if not user:
+            return Response(
+                {"error": "Mật khẩu hiện tại không đúng"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 6:
+            return Response(
+                {"error": "Mật khẩu mới phải có ít nhất 6 ký tự"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Đổi mật khẩu thành công"})
 
 class RequestPasswordResetView(APIView):
 

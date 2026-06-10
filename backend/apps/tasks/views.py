@@ -644,6 +644,8 @@ class RemindTaskView(APIView):
             project = task.project,
             priority = 2,
         )
+        task.is_warned = True
+        task.save(update_fields=["is_warned"])
 
         return Response({"message": "Đã gửi nhắc nhở"}, status=200)
 

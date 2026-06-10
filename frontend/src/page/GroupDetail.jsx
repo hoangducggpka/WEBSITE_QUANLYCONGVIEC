@@ -296,7 +296,7 @@ function GroupDetail() {
     );
 
   // ── Duyệt / từ chối yêu cầu (local state; gọi API nếu cần) ──
-  const approveRequest = (reqUuid) => {
+  const handleRequest = (reqUuid) => {
     const req = requests.find((r) => r.uuid === reqUuid);
     if (req) {
       // Reload để lấy member mới từ server sau khi duyệt
@@ -305,9 +305,79 @@ function GroupDetail() {
     }
   };
 
-  const rejectRequest = (reqUuid) =>
-    setRequests((rs) => rs.filter((r) => r.uuid !== reqUuid));
+  const approveRequest = async (request_uuid) => {
+    if (!window.confirm("Bạn có chắc chắn muốn duyệt yêu cầu này?")) {
+      return;
+    }
+    try {
+      const res = await apiFetch(
+        `/request/approve/${request_uuid}/`,
+        {
+          method: "PATCH",
+          headers: {
+          },
+        }
+      );
 
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Duyệt thành công");
+        const req = requests.find((r) => r.uuid === request_uuid);
+        if (req) {
+          // Reload để lấy member mới từ server sau khi duyệt
+          setRequests((rs) => rs.filter((r) => r.uuid !== request_uuid));
+          setModal(null)
+          loadGroup();
+        }
+
+      } else {
+        alert(data.error || "Duyệt thất bại");
+      }
+    } catch (err) {
+      alert("Network error: " + err.message);
+    }
+  };
+
+  function rejectRequest(requestUuid) {
+    if (!window.confirm("Bạn có chắc chắn muốn từ chối yêu cầu này?")) {
+      return;
+    }
+
+    apiFetch(`/request/reject/${requestUuid}/`, {
+      method: "DELETE",
+      headers: {
+      },
+    })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => { throw err; });
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log("Đã từ chối yêu cầu", data);
+        // cập nhật lại danh sách requests sau khi reject
+        const req = requests.find((r) => r.uuid === requestUuid);
+        if (req) {
+          // Reload để lấy member mới từ server sau khi duyệt
+          setRequests((rs) => rs.filter((r) => r.uuid !== requestUuid));
+          setModal(null)
+          loadGroup();
+        }
+
+      })
+      .catch(err => {
+        console.error("Error:", err);
+        alert("Có lỗi xảy ra khi từ chối yêu cầu.");
+      });
+    
+
+  }
+  const reject = (reqUuid) =>{
+    
+    setRequests((rs) => rs.filter((r) => r.uuid !== reqUuid));
+  }
   // ── Thêm thành viên ──
   const handleAddMember = async () => {
     try {

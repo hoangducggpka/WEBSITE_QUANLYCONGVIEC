@@ -6,9 +6,41 @@ import { apiFetch } from "../utils/api";
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const WS_BASE = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
+// ─── Helpers ──────────────────────────────────────────────────────────────
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
+/** Đảm bảo avatar URL có host đầy đủ (fix WS trả về relative path) */
+function resolveAvatar(path) {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    return `${API_BASE_URL}${path}`;
+}
 function getToken() {
     return localStorage.getItem("access") || "";
+}
+
+function Avatar({ src, name, size = 34, round = false }) {
+    const [err, setErr] = useState(false);
+    const initials      = (name || "?").trim().slice(0, 2).toUpperCase();
+    const borderRadius  = round ? "50%" : 8;
+    const resolvedSrc   = resolveAvatar(src);   // ← thêm dòng này
+
+    if (err || !resolvedSrc) {
+        return (
+            <div style={{
+                width: size, height: size, borderRadius,
+                background: "#e2e8f0", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: size * 0.35,
+                fontWeight: 700, color: "#64748b", flexShrink: 0,
+            }}>{initials}</div>
+        );
+    }
+    return (
+        <img src={resolvedSrc} alt={name}   // ← resolvedSrc thay vì src
+            style={{ width: size, height: size, borderRadius, objectFit: "cover", flexShrink: 0 }}
+            onError={() => setErr(true)}
+        />
+    );
 }
 
 // ─── Scale config (removed "hour") ────────────────────────────────────────
@@ -142,28 +174,7 @@ const Icon = {
     Target:      () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>),
 };
 
-// ─── Avatar ────────────────────────────────────────────────────────────────
-function Avatar({ src, name, size = 34, round = false }) {
-    const [err, setErr] = useState(false);
-    const initials      = (name || "?").slice(0, 2).toUpperCase();
-    const borderRadius  = round ? "50%" : 8;
-    if (err || !src) {
-        return (
-            <div style={{
-                width: size, height: size, borderRadius,
-                background: "#e2e8f0", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: size * 0.35,
-                fontWeight: 700, color: "#64748b", flexShrink: 0,
-            }}>{initials}</div>
-        );
-    }
-    return (
-        <img src={src} alt={name}
-            style={{ width: size, height: size, borderRadius, objectFit: "cover", flexShrink: 0 }}
-            onError={() => setErr(true)}
-        />
-    );
-}
+
 
 // ─── Modal wrapper ─────────────────────────────────────────────────────────
 function Modal({ open, onClose, title, icon, wide, ultraWide, children, footer }) {
@@ -392,10 +403,10 @@ function EditProjectModal({ open, onClose, project, onSave, loading }) {
                 <label className={styles.formLabel}>Tên dự án</label>
                 <input className={styles.formInput} value={form.name} onChange={set("name")} />
             </div>
-            <div className={styles.formGroup}>
+            {/* <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Mô tả</label>
                 <textarea className={styles.formTextarea} value={form.description} onChange={set("description")} rows={3} />
-            </div>
+            </div> */}
             <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Ngày bắt đầu</label>
@@ -495,7 +506,7 @@ function CreateTaskModal({ open, onClose, projectMembers, onSave, loading }) {
                         {loading ? "Đang tạo..." : (
                             assignedCount > 0
                                 ? <><Icon.UserCheck /> Bàn giao {assignedCount} thành viên</>
-                                : <><Icon.Plus /> Tạo task (không bàn giao)</>
+                                : <><Icon.Plus/> Tạo task</>
                         )}
                     </button>
                 </>
@@ -540,10 +551,10 @@ function CreateTaskModal({ open, onClose, projectMembers, onSave, loading }) {
                             </select>
                         </div>
                     </div>
-                    <div className={styles.formGroup}>
+                    {/* <div className={styles.formGroup}>
                         <label className={styles.formLabel}>Ghi chú</label>
                         <textarea className={styles.formTextarea} value={form.note} onChange={set("note")} placeholder="Ghi chú thêm..." rows={3} />
-                    </div>
+                    </div> */}
                     {assignedCount > 0 && (
                         <div style={{ marginTop: 8, padding: "10px 12px", background: "#eef2ff", borderRadius: 10, border: "1px solid #c7d2fe" }}>
                             <div style={{ fontSize: 10, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>
@@ -801,39 +812,8 @@ function MembersModal({ open, onClose, project, onKick, onAdd, loading }) {
 }
 
 // ─── Comments Modal ────────────────────────────────────────────────────────
-function CommentsModal({ open, onClose, comments, projectUuid, isCreator, onRefresh, loading }) {
-    const [text, setText]     = useState("");
-    const [replyTo, setReplyTo] = useState(null);
-    const [sending, setSending] = useState(false);
-
-    const handleAdd = async () => {
-        if (!text.trim() || sending) return;
-        setSending(true);
-        try {
-            await apiFetch(`/comments/${projectUuid}/`, {
-                method: "POST",
-                body:   JSON.stringify({ content: text.trim(), parent_uuid: replyTo?.uuid || undefined }),
-            });
-            setText(""); setReplyTo(null); onRefresh();
-        } catch (e) { alert(e.message); }
-        finally { setSending(false); }
-    };
-
-    const handleDelete = async (uuid) => {
-        if (!window.confirm("Xóa bình luận này?")) return;
-        try {
-            await apiFetch(`/comments/detail/${uuid}/`, { method: "DELETE" });
-            onRefresh();
-        } catch (e) { alert(e.message); }
-    };
-
-    const handlePin = async (uuid) => {
-        try {
-            await apiFetch(`/comments/pin/${uuid}/`, { method: "POST" });
-            onRefresh();
-        } catch (e) { alert(e.message); }
-    };
-
+function CommentsModal({ open, onClose, comments, isCreator, onSend, onDelete, onPin, replyTo, setReplyTo, text, setText }) {
+    const bodyRef = useRef(null);
     const sorted = [...comments].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
     return (
@@ -841,9 +821,19 @@ function CommentsModal({ open, onClose, comments, projectUuid, isCreator, onRefr
             footer={
                 <div style={{ padding: 0, border: "none", width: "100%" }}>
                     {replyTo && (
-                        <div style={{ fontSize: 11, color: "#6366f1", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                            <Icon.Reply /> Reply <strong>{replyTo.author}</strong>
-                            <button onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", marginLeft: 4 }}><Icon.Close /></button>
+                        <div style={{
+                            fontSize: 11, color: "#6366f1", marginBottom: 6,
+                            display: "flex", alignItems: "center", gap: 6,
+                            padding: "5px 10px", background: "#eef2ff",
+                            borderRadius: 8, border: "1px solid #c7d2fe",
+                        }}>
+                            <span style={{ width: 12, height: 12, flexShrink: 0, display: "flex" }}><Icon.Reply /></span>
+                            <span>Reply <strong>{replyTo.author}</strong></span>
+                            <button onClick={() => setReplyTo(null)} style={{
+                                background: "none", border: "none", cursor: "pointer",
+                                marginLeft: "auto", color: "#94a3b8", display: "flex",
+                                width: 14, height: 14, alignItems: "center",
+                            }}><Icon.Close /></button>
                         </div>
                     )}
                     <div style={{ display: "flex", gap: 8, width: "100%" }}>
@@ -851,60 +841,596 @@ function CommentsModal({ open, onClose, comments, projectUuid, isCreator, onRefr
                             placeholder={replyTo ? `Reply ${replyTo.author}...` : "Nhập bình luận..."}
                             value={text}
                             onChange={e => setText(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleAdd()}
-                            style={{ flex: 1 }}
+                            onKeyDown={e => e.key === "Enter" && !e.shiftKey && onSend()}
+                            style={{
+                                flex: 1, height: 38, padding: "0 12px",
+                                border: "1px solid #dbe3ec", borderRadius: 10,
+                                outline: "none", fontSize: 12, fontFamily: "DM Sans, sans-serif",
+                            }}
                         />
-                        <button className={styles.commentSendBtn} onClick={handleAdd} disabled={sending}>
-                            <Icon.Send /> {sending ? "..." : "Gửi"}
+                        <button className={styles.commentSendBtn} onClick={onSend} disabled={!text.trim()}>
+                            <Icon.Send /> Gửi
                         </button>
                     </div>
                 </div>
             }
         >
-            {loading && <div style={{ textAlign: "center", padding: 20, color: "#94a3b8" }}>Đang tải...</div>}
-            {!loading && sorted.length === 0 && (
-                <div style={{ textAlign: "center", padding: 20, color: "#94a3b8", fontSize: 13 }}>Chưa có bình luận nào</div>
-            )}
-            {sorted.map(c => (
-                <div key={c.uuid} className={`${styles.commentItem} ${c.pinned ? styles.commentItemPinned : ""}`}>
-                    {c.pinned && <div className={styles.pinnedBadge}><Icon.Pin /> Đã ghim</div>}
-                    <div className={styles.commentHeader}>
-                        <Avatar src={c.avatarpath} name={c.fullname || c.author} size={28} round />
-                        <span className={styles.commentAuthor}>{c.fullname || c.author}</span>
-                        <span className={styles.commentTime}>
-                            {new Date(c.created_at).toLocaleString("vi-VN")}{c.is_edited && " (đã sửa)"}
-                        </span>
+            <div ref={bodyRef} style={{ display: "contents" }}>
+                {sorted.length === 0 && (
+                    <div style={{ textAlign: "center", padding: 24, color: "#94a3b8", fontSize: 13 }}>
+                        Chưa có bình luận nào
                     </div>
-                    <div className={styles.commentText}>{c.content}</div>
-                    {(c.replies || []).map(r => (
-                        <div key={r.uuid} className={styles.replyIndent}>
-                            <div className={styles.replyHeader}>
-                                <Avatar src={r.avatarpath} name={r.fullname || r.author} size={22} round />
-                                <span className={styles.replyAuthor}>{r.fullname || r.author}</span>
+                )}
+                {sorted.map(c => (
+                    <div key={c.uuid} className={`${styles.commentItem} ${c.pinned ? styles.commentItemPinned : ""}`}>
+                        {c.pinned && <div className={styles.pinnedBadge}><Icon.Pin /> Đã ghim</div>}
+                        <div className={styles.commentHeader}>
+                            <Avatar src={c.avatarpath} name={c.fullname || c.author} size={28} round />
+                            <div style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1, minWidth: 0 }}>
+                                <span className={styles.commentAuthor}>{c.fullname || c.author}</span>
+                                <span className={styles.commentTime}>
+                                    {new Date(c.created_at).toLocaleString("vi-VN")}
+                                    {c.is_edited && " (đã sửa)"}
+                                </span>
                             </div>
-                            <div className={styles.replyText}>{r.content}</div>
                         </div>
-                    ))}
-                    <div className={styles.commentActionsRow}>
-                        {isCreator && (
-                            <button className={`${styles.commentActBtn} ${c.pinned ? styles.commentActBtnActive : ""}`} onClick={() => handlePin(c.uuid)}>
-                                <Icon.Pin />
+                        <div className={styles.commentText}>{c.content}</div>
+                        {(c.replies || []).map(r => (
+                            <div key={r.uuid} className={styles.replyIndent}>
+                                <div className={styles.replyHeader}>
+                                    <Avatar src={r.avatarpath} name={r.fullname || r.author} size={22} round />
+                                    <span className={styles.replyAuthor}>{r.fullname || r.author}</span>
+                                    <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8", flexShrink: 0 }}>
+                                        {new Date(r.created_at).toLocaleString("vi-VN")}
+                                    </span>
+                                </div>
+                                <div className={styles.replyText}>{r.content}</div>
+                            </div>
+                        ))}
+                        <div className={styles.commentActionsRow}>
+                            {isCreator && (
+                                <button className={`${styles.commentActBtn} ${c.pinned ? styles.commentActBtnActive : ""}`}
+                                    onClick={() => onPin(c.uuid)} title={c.pinned ? "Bỏ ghim" : "Ghim"}>
+                                    <Icon.Pin />
+                                </button>
+                            )}
+                            <button className={styles.commentActBtn}
+                                onClick={() => setReplyTo({ uuid: c.uuid, author: c.fullname || c.author })}
+                                title="Reply">
+                                <Icon.Reply />
                             </button>
-                        )}
-                        <button className={styles.commentActBtn} onClick={() => setReplyTo({ uuid: c.uuid, author: c.fullname || c.author })}>
-                            <Icon.Reply />
-                        </button>
-                        {(c.is_mine || isCreator) && (
-                            <button className={`${styles.commentActBtn} ${styles.commentActBtnDanger}`} onClick={() => handleDelete(c.uuid)}>
-                                <Icon.Trash />
-                            </button>
-                        )}
+                            {(c.is_mine || isCreator) && (
+                                <button className={`${styles.commentActBtn} ${styles.commentActBtnDanger}`}
+                                    onClick={() => onDelete(c.uuid)} title="Xóa">
+                                    <Icon.Trash />
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </Modal>
     );
 }
+
+// function CommentsModal({ open, onClose, comments: initialComments, projectUuid, isCreator, onRefresh, loading, onNewComment }) {
+//     const [comments, setComments] = useState([]);
+//     const [text,     setText    ] = useState("");
+//     const [replyTo,  setReplyTo ] = useState(null);
+//     const wsRef     = useRef(null);
+//     const bodyRef   = useRef(null);
+//     const [unreadComments, setUnreadComments] = useState(0);
+
+//     // Sync prop → state
+//     useEffect(() => { setComments(initialComments ?? []); }, [initialComments]);
+
+//     // WS lifecycle
+//     useEffect(() => {
+//         if (!open || !projectUuid) return;
+//         const token = localStorage.getItem("access") || "";
+//         const ws = new WebSocket(`${WS_BASE}/ws/comments/${projectUuid}/?token=${token}`);
+//         wsRef.current = ws;
+
+//         ws.onmessage = ({ data }) => {
+//             try {
+//                 const msg = JSON.parse(data);
+
+//                 if (msg.action === "new_comment") {
+//                     const c = msg.comment;
+//                     const isReply = !Object.prototype.hasOwnProperty.call(c, "replies");
+
+//                     if (isReply) {
+//                         // Cần biết parent_uuid — WS send thêm parent_uuid vào event
+//                         const parentUuid = msg.parent_uuid;
+//                         if (parentUuid) {
+//                             setComments(prev => prev.map(cm =>
+//                                 cm.uuid === parentUuid
+//                                     ? { ...cm, replies: [...(cm.replies || []), c] }
+//                                     : cm
+//                             ));
+//                         } else {
+//                             // fallback: refetch
+//                             onRefresh();
+//                         }
+//                     } else {
+//                         setComments(prev => [c, ...prev]);
+//                         setTimeout(() => {
+//                             bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+//                         }, 50);
+//                     }
+
+//                 } else if (msg.action === "delete_comment") {
+//                     setComments(prev =>
+//                         prev
+//                             .filter(c => c.uuid !== msg.comment_uuid)
+//                             .map(c => ({
+//                                 ...c,
+//                                 replies: (c.replies || []).filter(r => r.uuid !== msg.comment_uuid),
+//                             }))
+//                     );
+//                 } else if (msg.action === "pin_comment") {
+//                     setComments(prev =>
+//                         prev.map(c =>
+//                             c.uuid === msg.comment_uuid
+//                                 ? { ...c, pinned: msg.pinned }
+//                                 : c
+//                         )
+//                     );
+//                 }
+//             } catch { /* ignore */ }
+//         };
+
+//         ws.onerror = () => onRefresh(); // fallback nếu WS lỗi
+
+//         return () => { ws.close(); wsRef.current = null; };
+//     }, [open, projectUuid]);
+
+//     const sendWs = (payload) => {
+//         if (wsRef.current?.readyState === WebSocket.OPEN) {
+//             wsRef.current.send(JSON.stringify(payload));
+//             return true;
+//         }
+//         return false;
+//     };
+
+//     const handleAdd = () => {
+//         const trimmed = text.trim();
+//         if (!trimmed) return;
+//         const ok = sendWs({
+//             type:        "send_comment",
+//             content:     trimmed,
+//             parent_uuid: replyTo?.uuid ?? null,
+//         });
+//         if (!ok) {
+//             // WS chưa sẵn sàng, fallback REST
+//             apiFetch(`/comments/${projectUuid}/`, {
+//                 method: "POST",
+//                 body:   JSON.stringify({ content: trimmed, parent_uuid: replyTo?.uuid || undefined }),
+//             }).then(() => onRefresh()).catch(e => alert(e.message));
+//         }
+//         setText("");
+//         setReplyTo(null);
+//     };
+
+//     const handleDelete = (uuid) => {
+//         if (!window.confirm("Xóa bình luận này?")) return;
+//         sendWs({ type: "delete_comment", comment_uuid: uuid });
+//     };
+
+//     const handlePin = (uuid) => {
+//         sendWs({ type: "pin_comment", comment_uuid: uuid });
+//     };
+
+//     const sorted = [...comments].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+//     return (
+//         <Modal open={open} onClose={onClose} title="Bình luận dự án" icon={<Icon.Message />} wide
+//             footer={
+//                 <div style={{ padding: 0, border: "none", width: "100%" }}>
+//                     {replyTo && (
+//                         <div style={{
+//                             fontSize: 11, color: "#6366f1", marginBottom: 6,
+//                             display: "flex", alignItems: "center", gap: 6,
+//                             padding: "5px 10px", background: "#eef2ff",
+//                             borderRadius: 8, border: "1px solid #c7d2fe",
+//                         }}>
+//                             <span style={{ width: 12, height: 12, flexShrink: 0, display: "flex" }}>
+//                                 <Icon.Reply />
+//                             </span>
+//                             <span>Reply <strong>{replyTo.author}</strong></span>
+//                             <button onClick={() => setReplyTo(null)} style={{
+//                                 background: "none", border: "none", cursor: "pointer",
+//                                 marginLeft: "auto", color: "#94a3b8", display: "flex",
+//                                 width: 14, height: 14, alignItems: "center",
+//                             }}>
+//                                 <Icon.Close />
+//                             </button>
+//                         </div>
+//                     )}
+//                     <div style={{ display: "flex", gap: 8, width: "100%" }}>
+//                         <input
+//                             placeholder={replyTo ? `Reply ${replyTo.author}...` : "Nhập bình luận..."}
+//                             value={text}
+//                             onChange={e => setText(e.target.value)}
+//                             onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleAdd()}
+//                             style={{
+//                                 flex: 1, height: 38, padding: "0 12px",
+//                                 border: "1px solid #dbe3ec", borderRadius: 10,
+//                                 outline: "none", fontSize: 12,
+//                                 fontFamily: "DM Sans, sans-serif",
+//                             }}
+//                         />
+//                         <button className={styles.commentSendBtn} onClick={handleAdd} disabled={!text.trim()}>
+//                             <Icon.Send /> Gửi
+//                         </button>
+//                     </div>
+//                 </div>
+//             }
+//         >
+//             {/* ref để auto-scroll */}
+//             <div ref={bodyRef} style={{ display: "contents" }}>
+//                 {loading && (
+//                     <div style={{ textAlign: "center", padding: 20, color: "#94a3b8" }}>Đang tải...</div>
+//                 )}
+//                 {!loading && sorted.length === 0 && (
+//                     <div style={{ textAlign: "center", padding: 24, color: "#94a3b8", fontSize: 13 }}>
+//                         Chưa có bình luận nào
+//                     </div>
+//                 )}
+//                 {sorted.map(c => (
+//                     <div key={c.uuid} className={`${styles.commentItem} ${c.pinned ? styles.commentItemPinned : ""}`}>
+//                         {c.pinned && (
+//                             <div className={styles.pinnedBadge}>
+//                                 <Icon.Pin /> Đã ghim
+//                             </div>
+//                         )}
+//                         <div className={styles.commentHeader}>
+//                             <Avatar src={c.avatarpath} name={c.fullname || c.author} size={28} round />
+//                             <div style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1, minWidth: 0 }}>
+//                                 <span className={styles.commentAuthor}>{c.fullname || c.author}</span>
+//                                 <span className={styles.commentTime}>
+//                                     {new Date(c.created_at).toLocaleString("vi-VN")}
+//                                     {c.is_edited && " (đã sửa)"}
+//                                 </span>
+//                             </div>
+//                         </div>
+//                         <div className={styles.commentText}>{c.content}</div>
+
+//                         {/* Replies */}
+//                         {(c.replies || []).map(r => (
+//                             <div key={r.uuid} className={styles.replyIndent}>
+//                                 <div className={styles.replyHeader}>
+//                                     <Avatar src={r.avatarpath} name={r.fullname || r.author} size={22} round />
+//                                     <span className={styles.replyAuthor}>{r.fullname || r.author}</span>
+//                                     <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8", flexShrink: 0 }}>
+//                                         {new Date(r.created_at).toLocaleString("vi-VN")}
+//                                     </span>
+//                                 </div>
+//                                 <div className={styles.replyText}>{r.content}</div>
+//                             </div>
+//                         ))}
+
+//                         {/* Actions */}
+//                         <div className={styles.commentActionsRow}>
+//                             {isCreator && (
+//                                 <button
+//                                     className={`${styles.commentActBtn} ${c.pinned ? styles.commentActBtnActive : ""}`}
+//                                     onClick={() => handlePin(c.uuid)}
+//                                     title={c.pinned ? "Bỏ ghim" : "Ghim"}
+//                                 >
+//                                     <Icon.Pin />
+//                                 </button>
+//                             )}
+//                             <button
+//                                 className={styles.commentActBtn}
+//                                 onClick={() => setReplyTo({ uuid: c.uuid, author: c.fullname || c.author })}
+//                                 title="Reply"
+//                             >
+//                                 <Icon.Reply />
+//                             </button>
+//                             {(c.is_mine || isCreator) && (
+//                                 <button
+//                                     className={`${styles.commentActBtn} ${styles.commentActBtnDanger}`}
+//                                     onClick={() => handleDelete(c.uuid)}
+//                                     title="Xóa"
+//                                 >
+//                                     <Icon.Trash />
+//                                 </button>
+//                             )}
+//                         </div>
+//                     </div>
+//                 ))}
+//             </div>
+//         </Modal>
+//     );
+// }
+
+// ─── Comments Panel (inline, always visible) ──────────────────────────────
+function CommentsPanel({ comments, isCreator, onOpenFull, onSend, onDelete, onPin, replyTo, setReplyTo, text, setText }) {
+    const sorted = [...comments].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+    return (
+        <div className={styles.commentsPanel}>
+            <div className={styles.commentsPanelHeader}>
+                <span className={styles.commentsPanelTitle}>
+                    <Icon.Message /> Bình luận ({comments.length})
+                </span>
+                <button className={styles.commentsPanelExpand} onClick={onOpenFull} title="Mở rộng toàn màn hình">
+                    <Icon.Expand />
+                </button>
+            </div>
+
+            <div className={styles.commentsPanelInput}>
+                {replyTo && (
+                    <div style={{
+                        fontSize: 11, color: "#6366f1", marginBottom: 5,
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "4px 8px", background: "#eef2ff",
+                        borderRadius: 7, border: "1px solid #c7d2fe",
+                    }}>
+                        <span style={{ width: 11, height: 11, display: "flex", flexShrink: 0 }}><Icon.Reply /></span>
+                        <span>Reply <strong>{replyTo.author}</strong></span>
+                        <button onClick={() => setReplyTo(null)} style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            marginLeft: "auto", color: "#94a3b8", display: "flex",
+                        }}><Icon.Close /></button>
+                    </div>
+                )}
+                <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                        placeholder={replyTo ? `Reply ${replyTo.author}...` : "Nhập bình luận..."}
+                        value={text}
+                        onChange={e => setText(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && onSend()}
+                        className={styles.commentsPanelTextInput}
+                    />
+                    <button className={styles.commentSendBtn} onClick={onSend} disabled={!text.trim()}
+                        style={{ height: 32, padding: "0 10px" }}>
+                        <Icon.Send />
+                    </button>
+                </div>
+            </div>
+
+            <div className={styles.commentsPanelList}>
+                {sorted.length === 0 && (
+                    <div style={{ textAlign: "center", padding: "18px 0", color: "#94a3b8", fontSize: 12 }}>
+                        Chưa có bình luận nào
+                    </div>
+                )}
+                {sorted.map(c => (
+                    <div key={c.uuid} className={`${styles.commentItem} ${c.pinned ? styles.commentItemPinned : ""}`}
+                        style={{ marginBottom: 7 }}>
+                        {c.pinned && <div className={styles.pinnedBadge}><Icon.Pin /> Đã ghim</div>}
+                        <div className={styles.commentHeader}>
+                            <Avatar src={c.avatarpath} name={c.fullname || c.author} size={24} round />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <span className={styles.commentAuthor}>{c.fullname || c.author}</span>
+                                <span className={styles.commentTime}>{new Date(c.created_at).toLocaleString("vi-VN")}</span>
+                            </div>
+                        </div>
+                        <div className={styles.commentText}>{c.content}</div>
+                        {(c.replies || []).map(r => (
+                            <div key={r.uuid} className={styles.replyIndent}>
+                                <div className={styles.replyHeader}>
+                                    <Avatar src={r.avatarpath} name={r.fullname || r.author} size={18} round />
+                                    <span className={styles.replyAuthor}>{r.fullname || r.author}</span>
+                                    <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>
+                                        {new Date(r.created_at).toLocaleString("vi-VN")}
+                                    </span>
+                                </div>
+                                <div className={styles.replyText}>{r.content}</div>
+                            </div>
+                        ))}
+                        <div className={styles.commentActionsRow}>
+                            {isCreator && (
+                                <button className={`${styles.commentActBtn} ${c.pinned ? styles.commentActBtnActive : ""}`}
+                                    onClick={() => onPin(c.uuid)} title={c.pinned ? "Bỏ ghim" : "Ghim"}>
+                                    <Icon.Pin />
+                                </button>
+                            )}
+                            <button className={styles.commentActBtn}
+                                onClick={() => setReplyTo({ uuid: c.uuid, author: c.fullname || c.author })}
+                                title="Reply">
+                                <Icon.Reply />
+                            </button>
+                            {(c.is_mine || isCreator) && (
+                                <button className={`${styles.commentActBtn} ${styles.commentActBtnDanger}`}
+                                    onClick={() => onDelete(c.uuid)} title="Xóa">
+                                    <Icon.Trash />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// function CommentsPanel({ comments: initialComments, projectUuid, isCreator, onRefresh, onOpenFull }) {
+//     const [comments, setComments] = useState([]);
+//     const [text, setText] = useState("");
+//     const [replyTo, setReplyTo] = useState(null);
+//     const wsRef = useRef(null);
+
+//     useEffect(() => { setComments(initialComments ?? []); }, [initialComments]);
+
+//     useEffect(() => {
+//         if (!projectUuid) return;
+//         const token = localStorage.getItem("access") || "";
+//         const ws = new WebSocket(`${WS_BASE}/ws/comments/${projectUuid}/?token=${token}`);
+//         wsRef.current = ws;
+
+//         ws.onmessage = ({ data }) => {
+//             try {
+//                 const msg = JSON.parse(data);
+//                 if (msg.action === "new_comment") {
+//                     const c = msg.comment;
+//                     const isReply = !Object.prototype.hasOwnProperty.call(c, "replies");
+//                     if (isReply) {
+//                         const parentUuid = msg.parent_uuid;
+//                         if (parentUuid) {
+//                             setComments(prev => prev.map(cm =>
+//                                 cm.uuid === parentUuid
+//                                     ? { ...cm, replies: [...(cm.replies || []), c] }
+//                                     : cm
+//                             ));
+//                         } else { onRefresh(); }
+//                     } else {
+//                         setComments(prev => [c, ...prev]);
+//                     }
+//                 } else if (msg.action === "delete_comment") {
+//                     setComments(prev =>
+//                         prev.filter(c => c.uuid !== msg.comment_uuid)
+//                             .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.uuid !== msg.comment_uuid) }))
+//                     );
+//                 } else if (msg.action === "pin_comment") {
+//                     setComments(prev =>
+//                         prev.map(c => c.uuid === msg.comment_uuid ? { ...c, pinned: msg.pinned } : c)
+//                     );
+//                 }
+//             } catch { }
+//         };
+//         ws.onerror = () => onRefresh();
+//         return () => { ws.close(); wsRef.current = null; };
+//     }, [projectUuid]);
+
+//     const sendWs = (payload) => {
+//         if (wsRef.current?.readyState === WebSocket.OPEN) {
+//             wsRef.current.send(JSON.stringify(payload));
+//             return true;
+//         }
+//         return false;
+//     };
+
+//     const handleAdd = () => {
+//         const trimmed = text.trim();
+//         if (!trimmed) return;
+//         const ok = sendWs({ type: "send_comment", content: trimmed, parent_uuid: replyTo?.uuid ?? null });
+//         if (!ok) {
+//             apiFetch(`/comments/${projectUuid}/`, {
+//                 method: "POST",
+//                 body: JSON.stringify({ content: trimmed, parent_uuid: replyTo?.uuid || undefined }),
+//             }).then(() => onRefresh()).catch(e => alert(e.message));
+//         }
+//         setText("");
+//         setReplyTo(null);
+//     };
+
+//     const handleDelete = (uuid) => {
+//         if (!window.confirm("Xóa bình luận này?")) return;
+//         sendWs({ type: "delete_comment", comment_uuid: uuid });
+//     };
+
+//     const handlePin = (uuid) => {
+//         sendWs({ type: "pin_comment", comment_uuid: uuid });
+//     };
+
+//     const sorted = [...comments].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+//     return (
+//         <div className={styles.commentsPanel}>
+//             {/* Header */}
+//             <div className={styles.commentsPanelHeader}>
+//                 <span className={styles.commentsPanelTitle}>
+//                     <Icon.Message /> Bình luận ({comments.length})
+//                 </span>
+//                 <button className={styles.commentsPanelExpand} onClick={onOpenFull} title="Mở rộng">
+//                     <Icon.Expand />
+//                 </button>
+//             </div>
+
+//             {/* Input */}
+//             <div className={styles.commentsPanelInput}>
+//                 {replyTo && (
+//                     <div style={{
+//                         fontSize: 11, color: "#6366f1", marginBottom: 5,
+//                         display: "flex", alignItems: "center", gap: 6,
+//                         padding: "4px 8px", background: "#eef2ff",
+//                         borderRadius: 7, border: "1px solid #c7d2fe",
+//                     }}>
+//                         <Icon.Reply style={{ width: 11 }} />
+//                         <span>Reply <strong>{replyTo.author}</strong></span>
+//                         <button onClick={() => setReplyTo(null)} style={{
+//                             background: "none", border: "none", cursor: "pointer",
+//                             marginLeft: "auto", color: "#94a3b8", display: "flex",
+//                         }}><Icon.Close /></button>
+//                     </div>
+//                 )}
+//                 <div style={{ display: "flex", gap: 6 }}>
+//                     <input
+//                         placeholder={replyTo ? `Reply ${replyTo.author}...` : "Nhập bình luận..."}
+//                         value={text}
+//                         onChange={e => setText(e.target.value)}
+//                         onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleAdd()}
+//                         className={styles.commentsPanelTextInput}
+//                     />
+//                     <button className={styles.commentSendBtn} onClick={handleAdd} disabled={!text.trim()}>
+//                         <Icon.Send />
+//                     </button>
+//                 </div>
+//             </div>
+
+//             {/* List */}
+//             <div className={styles.commentsPanelList}>
+//                 {sorted.length === 0 && (
+//                     <div style={{ textAlign: "center", padding: "18px 0", color: "#94a3b8", fontSize: 12 }}>
+//                         Chưa có bình luận nào
+//                     </div>
+//                 )}
+//                 {sorted.map(c => (
+//                     <div key={c.uuid} className={`${styles.commentItem} ${c.pinned ? styles.commentItemPinned : ""}`}
+//                         style={{ marginBottom: 7 }}>
+//                         {c.pinned && (
+//                             <div className={styles.pinnedBadge}><Icon.Pin /> Đã ghim</div>
+//                         )}
+//                         <div className={styles.commentHeader}>
+//                             <Avatar src={c.avatarpath} name={c.fullname || c.author} size={24} round />
+//                             <div style={{ flex: 1, minWidth: 0 }}>
+//                                 <span className={styles.commentAuthor}>{c.fullname || c.author}</span>
+//                                 <span className={styles.commentTime}>
+//                                     {new Date(c.created_at).toLocaleString("vi-VN")}
+//                                 </span>
+//                             </div>
+//                         </div>
+//                         <div className={styles.commentText}>{c.content}</div>
+//                         {(c.replies || []).map(r => (
+//                             <div key={r.uuid} className={styles.replyIndent}>
+//                                 <div className={styles.replyHeader}>
+//                                     <Avatar src={r.avatarpath} name={r.fullname || r.author} size={18} round />
+//                                     <span className={styles.replyAuthor}>{r.fullname || r.author}</span>
+//                                     <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>
+//                                         {new Date(r.created_at).toLocaleString("vi-VN")}
+//                                     </span>
+//                                 </div>
+//                                 <div className={styles.replyText}>{r.content}</div>
+//                             </div>
+//                         ))}
+//                         <div className={styles.commentActionsRow}>
+//                             {isCreator && (
+//                                 <button className={`${styles.commentActBtn} ${c.pinned ? styles.commentActBtnActive : ""}`}
+//                                     onClick={() => handlePin(c.uuid)} title={c.pinned ? "Bỏ ghim" : "Ghim"}>
+//                                     <Icon.Pin />
+//                                 </button>
+//                             )}
+//                             <button className={styles.commentActBtn}
+//                                 onClick={() => setReplyTo({ uuid: c.uuid, author: c.fullname || c.author })}
+//                                 title="Reply">
+//                                 <Icon.Reply />
+//                             </button>
+//                             {(c.is_mine || isCreator) && (
+//                                 <button className={`${styles.commentActBtn} ${styles.commentActBtnDanger}`}
+//                                     onClick={() => handleDelete(c.uuid)} title="Xóa">
+//                                     <Icon.Trash />
+//                                 </button>
+//                             )}
+//                         </div>
+//                     </div>
+//                 ))}
+//             </div>
+//         </div>
+//     );
+// }
 
 // ─── Task Tooltip ──────────────────────────────────────────────────────────
 function TaskTooltip({ task, member, visible, x, y }) {
@@ -1007,6 +1533,7 @@ function GanttRow({ member, tasks, viewOffset, totalUnits, scale, baseDate, onEd
                         const top      = rowPad + ti * (barHeight + 6);
                         const color    = statusColor(task.status);
 
+                        // MỚI
                         const isWarning = (() => {
                             if (task.status === "done") return false;
                             const now   = Date.now();
@@ -1014,9 +1541,17 @@ function GanttRow({ member, tasks, viewOffset, totalUnits, scale, baseDate, onEd
                             const end   = new Date(task.end_date).getTime();
                             const total = end - start;
                             if (total <= 0) return false;
-                            const ratio = 1 - (now - start) / total;
-                            return ratio <= 0.1 || (ratio <= 0.5 && task.status === "todo");
+
+                            const elapsedRatio = (now - start) / total;
+                            const progress = task.progress ?? 0;
+
+                            return (
+                                (elapsedRatio >= 0.5 && task.status === "todo") ||
+                                (elapsedRatio >= 0.8 && progress < 20) ||
+                                (elapsedRatio >= 0.9)
+                            );
                         })();
+
 
                         if (leftPct + widthPct < 0 || leftPct > 100) return null;
 
@@ -1088,7 +1623,12 @@ export default function ProjectDetail() {
     const [scale,    setScale   ] = useState("day");
     const [expanded, setExpanded] = useState(false);
 
+
+    
     const [viewOffset, setViewOffset] = useState(null);
+    // const [commentBadge, setCommentBadge] = useState(0);
+
+    // const [commentCount, setCommentCount] = useState(0);  // tổng comment đã biết
 
     // Warning tasks state
     const [warningTasks,   setWarningTasks  ] = useState([]);
@@ -1125,6 +1665,88 @@ export default function ProjectDetail() {
         [project, baseDate, scale, scaleConfig]
     );
 
+    // Thêm vào state section của ProjectDetail:
+    const [commentText, setCommentText]   = useState("");
+    const [commentReplyTo, setCommentReplyTo] = useState(null);
+    const commentWsRef = useRef(null);
+
+    // Thêm useEffect WS comment (chạy 1 lần khi mount):
+    useEffect(() => {
+        if (!uuid) return;
+        const token = localStorage.getItem("access") || "";
+        const ws = new WebSocket(`${WS_BASE}/ws/comments/${uuid}/?token=${token}`);
+        commentWsRef.current = ws;
+
+        ws.onmessage = ({ data }) => {
+            try {
+                const msg = JSON.parse(data);
+                if (msg.action === "new_comment") {
+                    const c = msg.comment;
+                    const isReply = !Object.prototype.hasOwnProperty.call(c, "replies");
+                    if (isReply) {
+                        const parentUuid = msg.parent_uuid;
+                        if (parentUuid) {
+                            setComments(prev => prev.map(cm =>
+                                cm.uuid === parentUuid
+                                    ? { ...cm, replies: [...(cm.replies || []), c] }
+                                    : cm
+                            ));
+                        } else { fetchComments(); }
+                    } else {
+                        setComments(prev => [c, ...prev]);
+                    }
+                } else if (msg.action === "delete_comment") {
+                    setComments(prev =>
+                        prev.filter(c => c.uuid !== msg.comment_uuid)
+                            .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.uuid !== msg.comment_uuid) }))
+                    );
+                } else if (msg.action === "pin_comment") {
+                    setComments(prev =>
+                        prev.map(c => c.uuid === msg.comment_uuid ? { ...c, pinned: msg.pinned } : c)
+                    );
+                }
+            } catch { }
+        };
+        ws.onerror = () => fetchComments();
+        return () => { ws.close(); commentWsRef.current = null; };
+    }, [uuid]);
+
+    // Shared handlers dùng chung cho cả panel và modal:
+    const sendCommentWs = (payload) => {
+        if (commentWsRef.current?.readyState === WebSocket.OPEN) {
+            commentWsRef.current.send(JSON.stringify(payload));
+            return true;
+        }
+        return false;
+    };
+
+    const handleCommentSend = useCallback(() => {
+        const trimmed = commentText.trim();
+        if (!trimmed) return;
+        const ok = sendCommentWs({
+            type: "send_comment",
+            content: trimmed,
+            parent_uuid: commentReplyTo?.uuid ?? null,
+        });
+        if (!ok) {
+            apiFetch(`/comments/${uuid}/`, {
+                method: "POST",
+                body: JSON.stringify({ content: trimmed, parent_uuid: commentReplyTo?.uuid || undefined }),
+            }).then(() => fetchComments()).catch(e => alert(e.message));
+        }
+        setCommentText("");
+        setCommentReplyTo(null);
+    }, [commentText, commentReplyTo, uuid]);
+
+    const handleCommentDelete = useCallback((cuuid) => {
+        if (!window.confirm("Xóa bình luận này?")) return;
+        sendCommentWs({ type: "delete_comment", comment_uuid: cuuid });
+    }, []);
+
+    const handleCommentPin = useCallback((cuuid) => {
+        sendCommentWs({ type: "pin_comment", comment_uuid: cuuid });
+    }, []);
+
     useEffect(() => {
         if (!project) return;
         setViewOffset(prev => {
@@ -1150,8 +1772,29 @@ export default function ProjectDetail() {
             const res  = await apiFetch(`/comments/${uuid}/`);
             const data = await res.json();
             setComments(Array.isArray(data) ? data : []);
-        } catch { /* silently ignore */ }
+        } catch { }
     }, [uuid]);
+    // const fetchComments = useCallback(async () => {
+    //     try {
+    //         const res  = await apiFetch(`/comments/${uuid}/`);
+    //         const data = await res.json();
+    //         const newComments = Array.isArray(data) ? data : [];
+    //         setComments(newComments);
+    //         // Nếu modal đóng và có comment mới hơn lần cuối
+    //         if (!modal.comments) {
+    //             const totalNew = newComments.length - commentCount;
+    //             if (totalNew > 0) setCommentBadge(b => b + totalNew);
+    //         }
+    //         setCommentCount(newComments.length);
+    //     } catch { }
+    // }, [uuid, commentCount, modal.comments]);
+    // const fetchComments = useCallback(async () => {
+    //     try {
+    //         const res  = await apiFetch(`/comments/${uuid}/`);
+    //         const data = await res.json();
+    //         setComments(Array.isArray(data) ? data : []);
+    //     } catch { /* silently ignore */ }
+    // }, [uuid]);
 
     const fetchWarningTasks = useCallback(async () => {
         setWarningLoading(true);
@@ -1167,9 +1810,10 @@ export default function ProjectDetail() {
     }, []);
 
     useEffect(() => { fetchProject(); }, [fetchProject]);
-    useEffect(() => {
-        if (modal.comments) fetchComments();
-    }, [modal.comments, fetchComments]);
+    // useEffect(() => {
+    //     if (modal.comments) fetchComments();
+    // }, [modal.comments, fetchComments]);
+    useEffect(() => { fetchComments(); }, [fetchProject]);
     useEffect(() => {
         if (modal.warning) fetchWarningTasks();
     }, [modal.warning, fetchWarningTasks]);
@@ -1209,32 +1853,59 @@ export default function ProjectDetail() {
     const projectMembers = project?.project_members || [];
     const isCreator      = project?.is_creator      || false;
 
+    // MỚI
     const isWarning = useCallback((task) => {
         if (task.status === "done") return false;
+        if (isOverdue(task)) return false;
         const now   = Date.now();
         const start = new Date(task.start_date).getTime();
         const end   = new Date(task.end_date).getTime();
         const total = end - start;
         if (total <= 0) return false;
-        const ratio = 1 - (now - start) / total;
-        return ratio <= 0.1 || (ratio <= 0.5 && task.status === "todo");
+
+        const elapsed = now - start;          // thời gian đã trôi qua
+        const elapsedRatio = elapsed / total; // tỉ lệ đã trôi qua (0 → 1)
+        const progress = task.progress ?? 0;
+
+        // Cảnh báo nếu:
+        // 1. Đã qua 50% thời gian nhưng vẫn todo (chưa bắt đầu làm)
+        // 2. Progress < 20% trong khi đã qua 80% thời gian
+        // 3. Deadline còn < 10% thời gian mà chưa done
+        return (
+            (elapsedRatio >= 0.5 && task.status === "todo") ||
+            (elapsedRatio >= 0.8 && progress < 20) ||
+            (elapsedRatio >= 0.9)
+        );
     }, []);
+
+    const isOverdue = useCallback((task) => {
+        if (task.status === "done") return false;
+        const now = Date.now();
+        const end = new Date(task.end_date).getTime();
+        return now > end;  // đã qua deadline, chưa done
+    }, []);
+
+    
 
     const filteredTasks = useMemo(() => tasks.filter(t => {
         if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
         if (filter === "done"     && t.status !== "done")      return false;
         if (filter === "warn"     && !isWarning(t))            return false;
         if (filter === "inreview" && t.status !== "in_review") return false;
+        if (filter === "overdue"  && !isOverdue(t))       return false;
         return true;
-    }), [tasks, search, filter, isWarning]);
+    }), [tasks, search, filter, isWarning, isOverdue]);
 
+    // MỚI
     const tasksByMember = useMemo(() => {
         const map = {};
         projectMembers.forEach(m => { map[m.userproject_uuid] = []; });
+        map["__unassigned__"] = []; 
         filteredTasks.forEach(t => {
-            if (t.userproject_uuid && map[t.userproject_uuid] !== undefined) {
-                map[t.userproject_uuid].push(t);
-            }
+            const key = t.userproject_uuid && map[t.userproject_uuid] !== undefined
+                ? t.userproject_uuid
+                : "__unassigned__";
+            map[key].push(t);
         });
         return map;
     }, [filteredTasks, projectMembers]);
@@ -1243,6 +1914,7 @@ export default function ProjectDetail() {
     const totalTasks    = tasks.length;
     const doneTasks     = tasks.filter(t => t.status === "done").length;
     const warnTasks     = tasks.filter(isWarning).length;
+    const overdueTasks = tasks.filter(isOverdue).length;
 
     const daysLeft = useMemo(() => {
         if (!project?.end_date) return 0;
@@ -1477,7 +2149,7 @@ export default function ProjectDetail() {
                             )}
                         </div>
 
-                        <p className={styles.projectDesc}>{project.description || "Chưa có mô tả"}</p>
+                        {/* <p className={styles.projectDesc}>{project.description || "Chưa có mô tả"}</p> */}
 
                         <div className={styles.metaRow}>
                             <div className={styles.dateGroup}>
@@ -1537,21 +2209,38 @@ export default function ProjectDetail() {
                                 onClick={() => setModal(m => ({ ...m, members: true }))}>
                                 <Icon.Users /> Thành viên
                             </button>
-                            <button className={styles.actBtn}
-                                onClick={() => setModal(m => ({ ...m, comments: true }))}>
+                            {/* <button className={styles.actBtn}
+                                onClick={() => {
+                                    setModal(m => ({ ...m, comments: true }));
+                                    setCommentBadge(0);   // ← reset khi mở
+                                }}
+                                style={{ position: "relative" }}
+                            >
                                 <Icon.Message /> Comment
-                            </button>
+                                {commentBadge > 0 && (
+                                    <span style={{
+                                        position: "absolute", top: -6, right: -6,
+                                        width: 16, height: 16, borderRadius: "50%",
+                                        background: "#ef4444", color: "white",
+                                        fontSize: 9, fontWeight: 700,
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        border: "2px solid white", lineHeight: 1,
+                                    }}>
+                                        {commentBadge > 9 ? "9+" : commentBadge}
+                                    </span>
+                                )}
+                            </button> */}
                         </div>
                         {/* Secondary actions row */}
                         <div className={styles.actionBtns} style={{ marginTop: 6 }}>
-                            <button
+                            {/* <button
                                 className={styles.actBtn}
                                 style={{ borderColor: "#fed7aa", color: "#c2410c", background: warnTasks > 0 ? "#fff7ed" : undefined }}
                                 onClick={() => setModal(m => ({ ...m, warning: true }))}
                             >
                                 <Icon.Warning />
                                 Cảnh báo{warnTasks > 0 ? ` (${warnTasks})` : ""}
-                            </button>
+                            </button> */}
                             {isCreator && (
                                 <button
                                     className={styles.actBtn}
@@ -1630,129 +2319,177 @@ export default function ProjectDetail() {
             )}
 
             {/* ── TIMELINE SECTION ─────────────────────────────── */}
-            <div className={`${styles.timelineSection} ${expanded ? styles.timelineSectionExpanded : ""}`}>
+            <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 8, overflow: "hidden" }}>
+                <div className={`${styles.timelineSection} ${expanded ? styles.timelineSectionExpanded : ""}`} style={{ flex: 1, minWidth: 0 }}>
 
-                {/* Toolbar */}
-                <div className={styles.tlToolbar}>
-                    <div className={styles.searchBox}>
-                        <Icon.Search />
-                        <input
-                            placeholder="Tìm kiếm task..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                        />
-                    </div>
+                    {/* Toolbar */}
+                    <div className={styles.tlToolbar}>
+                        <div className={styles.searchBox}>
+                            <Icon.Search />
+                            <input
+                                placeholder="Tìm kiếm task..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
 
-                    {[
-                        { key: "all",      label: "Tất cả" },
-                        { key: "done",     label: "Hoàn thành" },
-                        { key: "inreview", label: "Chờ duyệt" },
-                        { key: "warn",     label: `⚠ Nhắc nhở${warnTasks > 0 ? ` (${warnTasks})` : ""}` },
-                    ].map(f => (
-                        <button
-                            key={f.key}
-                            className={`${styles.filterBtn} ${filter === f.key ? styles.filterBtnActive : ""}`}
-                            style={f.key === "warn" && warnTasks > 0 ? { borderColor: "#f59e0b", color: "#d97706" } : {}}
-                            onClick={() => setFilter(f.key)}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
-
-                    <div className={styles.scaleGroup}>
-                        {Object.entries(SCALES).map(([key, s]) => (
+                        {[
+                            { key: "all",      label: "Tất cả" },
+                            { key: "done",     label: "Hoàn thành" },
+                            { key: "inreview", label: "Chờ duyệt" },
+                            { key: "warn",     label: `⚠ Nhắc nhở${warnTasks > 0 ? ` (${warnTasks})` : ""}` },
+                            { key: "overdue",  label: `🔴 Quá hạn${overdueTasks > 0 ? ` (${overdueTasks})` : ""}` },
+                        ].map(f => (
                             <button
-                                key={key}
-                                className={`${styles.scaleBtn} ${scale === key ? styles.scaleBtnActive : ""}`}
-                                onClick={() => setScale(key)}
+                                key={f.key}
+                                className={`${styles.filterBtn} ${filter === f.key ? styles.filterBtnActive : ""}`}
+                                // style={f.key === "warn" && warnTasks > 0 ? { borderColor: "#f59e0b", color: "#d97706" } : {}}
+                                style={
+                                    f.key === "warn"    && warnTasks    > 0 ? { borderColor: "#f59e0b", color: "#d97706" } :
+                                    f.key === "overdue" && overdueTasks > 0 ? { borderColor: "#ef4444", color: "#dc2626" } :
+                                    {}
+                                }
+                                onClick={() => setFilter(f.key)}
                             >
-                                {s.label}
+                                {f.label}
                             </button>
                         ))}
-                    </div>
 
-                    <div className={styles.viewNav}>
-                        <button className={styles.navBtn} onClick={navPrev} disabled={!canPrev}
-                            title={!canPrev ? "Đã đến ngày bắt đầu dự án" : ""}>
-                            <Icon.ChevronLeft />
-                        </button>
-                        <span className={styles.navLabel}>{rangeLabel}</span>
-                        <button className={styles.navBtn} onClick={navNext} disabled={!canNext}
-                            title={!canNext ? "Đã đến ngày kết thúc dự án" : ""}>
-                            <Icon.ChevronRight />
-                        </button>
-                    </div>
-
-                    {isCreator && (
-                        <button className={styles.actBtn} onClick={() => setModal(m => ({ ...m, createTask: true }))}>
-                            <Icon.Plus /> Thêm task
-                        </button>
-                    )}
-
-                    <button className={styles.expandBtn} onClick={() => setExpanded(e => !e)}
-                        title={expanded ? "Thu gọn" : "Mở rộng"}>
-                        {expanded ? <Icon.Compress /> : <Icon.Expand />}
-                    </button>
-                </div>
-
-                {/* Gantt Table — scroll both X and Y */}
-                <div className={styles.tlScrollWrap} ref={ganttScrollRef}>
-                    <table
-                        className={styles.ganttTable}
-                        style={{ minWidth: 160 + scaleConfig.totalUnits * scaleConfig.unitWidth }}
-                    >
-                        <colgroup>
-                            <col style={{ width: 160 }} />
-                            {columnHeaders.map((_, i) => (
-                                <col key={i} style={{ width: scaleConfig.unitWidth }} />
+                        <div className={styles.scaleGroup}>
+                            {Object.entries(SCALES).map(([key, s]) => (
+                                <button
+                                    key={key}
+                                    className={`${styles.scaleBtn} ${scale === key ? styles.scaleBtnActive : ""}`}
+                                    onClick={() => setScale(key)}
+                                >
+                                    {s.label}
+                                </button>
                             ))}
-                        </colgroup>
-                        <thead className={styles.ganttHead}>
-                            <tr>
-                                <th style={{ textAlign: "left", paddingLeft: 12 }}>Thành viên</th>
-                                {columnHeaders.map((d, i) => (
-                                    <th key={i} className={d.isToday ? styles.todayHeader : ""}>
-                                        {d.label}
-                                        {d.isToday && (
-                                            <div style={{ fontSize: 7, color: "#6366f1", marginTop: 1 }}>hôm nay</div>
-                                        )}
-                                    </th>
+                        </div>
+
+                        <div className={styles.viewNav}>
+                            <button className={styles.navBtn} onClick={navPrev} disabled={!canPrev}
+                                title={!canPrev ? "Đã đến ngày bắt đầu dự án" : ""}>
+                                <Icon.ChevronLeft />
+                            </button>
+                            <span className={styles.navLabel}>{rangeLabel}</span>
+                            <button className={styles.navBtn} onClick={navNext} disabled={!canNext}
+                                title={!canNext ? "Đã đến ngày kết thúc dự án" : ""}>
+                                <Icon.ChevronRight />
+                            </button>
+                        </div>
+
+                        {isCreator && (
+                            <button className={styles.actBtn} onClick={() => setModal(m => ({ ...m, createTask: true }))}>
+                                <Icon.Plus /> Thêm task
+                            </button>
+                        )}
+
+                        <button className={styles.expandBtn} onClick={() => setExpanded(e => !e)}
+                            title={expanded ? "Thu gọn" : "Mở rộng"}>
+                            {expanded ? <Icon.Compress /> : <Icon.Expand />}
+                        </button>
+                    </div>
+
+                    {/* Gantt Table — scroll both X and Y */}
+                    <div className={styles.tlScrollWrap} ref={ganttScrollRef}>
+                        <table
+                            className={styles.ganttTable}
+                            style={{ minWidth: 160 + scaleConfig.totalUnits * scaleConfig.unitWidth }}
+                        >
+                            <colgroup>
+                                <col style={{ width: 160 }} />
+                                {columnHeaders.map((_, i) => (
+                                    <col key={i} style={{ width: scaleConfig.unitWidth }} />
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {projectMembers.length === 0 ? (
+                            </colgroup>
+                            <thead className={styles.ganttHead}>
                                 <tr>
-                                    <td colSpan={scaleConfig.totalUnits + 1}
-                                        style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 13 }}>
-                                        Chưa có thành viên nào trong dự án
-                                    </td>
+                                    <th style={{ textAlign: "left", paddingLeft: 12 }}>Thành viên</th>
+                                    {columnHeaders.map((d, i) => (
+                                        <th key={i} className={d.isToday ? styles.todayHeader : ""}>
+                                            {d.label}
+                                            {d.isToday && (
+                                                <div style={{ fontSize: 7, color: "#6366f1", marginTop: 1 }}>hôm nay</div>
+                                            )}
+                                        </th>
+                                    ))}
                                 </tr>
-                            ) : (
-                                projectMembers.map(m => (
-                                    <GanttRow
-                                        key={m.userproject_uuid}
-                                        member={m}
-                                        tasks={tasksByMember[m.userproject_uuid] || []}
-                                        viewOffset={safeOffset}
-                                        totalUnits={scaleConfig.totalUnits}
-                                        scale={scale}
-                                        baseDate={baseDate}
-                                        onEdit={task => {
-                                            setEditingTask(task);
-                                            setModal(mm => ({ ...mm, editTask: true }));
-                                        }}
-                                        onDelete={handleDeleteTask}
-                                        onRemind={handleRemindTask}
-                                        isCreator={isCreator}
-                                        rowRef={el => { memberRowRefs.current[m.userproject_uuid] = el; }}
-                                        onTaskHover={handleTaskHover}
-                                    />
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {projectMembers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={scaleConfig.totalUnits + 1}
+                                            style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 13 }}>
+                                            Chưa có thành viên nào trong dự án
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    // MỚI
+                                    <>
+                                        {projectMembers.map(m => (
+                                            <GanttRow
+                                                key={m.userproject_uuid}
+                                                member={m}
+                                                tasks={tasksByMember[m.userproject_uuid] || []}
+                                                viewOffset={safeOffset}
+                                                totalUnits={scaleConfig.totalUnits}
+                                                scale={scale}
+                                                baseDate={baseDate}
+                                                onEdit={task => { setEditingTask(task); setModal(mm => ({ ...mm, editTask: true })); }}
+                                                onDelete={handleDeleteTask}
+                                                onRemind={handleRemindTask}
+                                                isCreator={isCreator}
+                                                rowRef={el => { memberRowRefs.current[m.userproject_uuid] = el; }}
+                                                onTaskHover={handleTaskHover}
+                                            />
+                                        ))}
+                                        {tasksByMember["__unassigned__"]?.length > 0 && (
+                                            <GanttRow
+                                                key="__unassigned__"
+                                                member={{ fullname: "Chưa bàn giao", username: "unassigned", avatarpath: null }}
+                                                tasks={tasksByMember["__unassigned__"]}
+                                                viewOffset={safeOffset}
+                                                totalUnits={scaleConfig.totalUnits}
+                                                scale={scale}
+                                                baseDate={baseDate}
+                                                onEdit={task => { setEditingTask(task); setModal(mm => ({ ...mm, editTask: true })); }}
+                                                onDelete={handleDeleteTask}
+                                                onRemind={handleRemindTask}
+                                                isCreator={isCreator}
+                                                rowRef={null}
+                                                onTaskHover={handleTaskHover}
+                                            />
+                                        )}
+                                    </>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+                {!expanded && (
+                    <CommentsPanel
+                        comments={comments}
+                        isCreator={isCreator}
+                        onOpenFull={() => setModal(m => ({ ...m, comments: true }))}
+                        onSend={handleCommentSend}
+                        onDelete={handleCommentDelete}
+                        onPin={handleCommentPin}
+                        replyTo={commentReplyTo}
+                        setReplyTo={setCommentReplyTo}
+                        text={commentText}
+                        setText={setCommentText}
+                    />
+                )}
+                {/* {!expanded && (
+                    <CommentsPanel
+                        comments={comments}
+                        projectUuid={uuid}
+                        isCreator={isCreator}
+                        onRefresh={fetchComments}
+                        onOpenFull={() => setModal(m => ({ ...m, comments: true }))}
+                    />
+                )} */}
             </div>
 
             {/* ── MODALS ───────────────────────────────────────── */}
@@ -1789,17 +2526,30 @@ export default function ProjectDetail() {
                 open={modal.comments}
                 onClose={() => setModal(m => ({ ...m, comments: false }))}
                 comments={comments}
+                isCreator={isCreator}
+                onSend={handleCommentSend}
+                onDelete={handleCommentDelete}
+                onPin={handleCommentPin}
+                replyTo={commentReplyTo}
+                setReplyTo={setCommentReplyTo}
+                text={commentText}
+                setText={setCommentText}
+            />
+            {/* <CommentsModal
+                open={modal.comments}
+                onClose={() => setModal(m => ({ ...m, comments: false }))}
+                comments={comments}
                 projectUuid={uuid}
                 isCreator={isCreator}
                 onRefresh={fetchComments}
                 loading={apiLoading}
-            />
-            <WarningTasksModal
+            /> */}
+            {/* <WarningTasksModal
                 open={modal.warning}
                 onClose={() => setModal(m => ({ ...m, warning: false }))}
                 warningTasks={warningTasks}
                 warningLoading={warningLoading}
-            />
+            /> */}
             <ApproveTasksModal
                 open={modal.approve}
                 onClose={() => setModal(m => ({ ...m, approve: false }))}

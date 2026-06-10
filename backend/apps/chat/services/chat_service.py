@@ -126,36 +126,6 @@ def _broadcast_message(user, msg: Message, reply_to_data=None, request=None):
 
     async_to_sync(channel_layer.group_send)(group_name, payload)
     return payload
-# def _broadcast_message(user, msg: Message, reply_to_data=None):
-#     """Broadcast 1 Message object lên channel layer."""
-#     channel_layer = get_channel_layer()
-#     group_name = f"chat_{msg.conversation.uuid}"
-
-#     payload = {
-#         "type":            "chat_message",
-#         "message_id":      msg.id,
-#         "message_uuid":    str(msg.uuid),
-#         "message":         msg.content or "",
-#         "sender_id":       user.id,
-#         "sender_name":     (
-#             user.profile.fullname
-#             if hasattr(user, "profile") and user.profile.fullname
-#             else user.username
-#         ),
-#         "sender_avatar":   _get_avatar_url(user),
-#         "message_type":    msg.type,
-#         "created_at":      msg.created_at.isoformat(),
-#         "reply_to":        msg.reply_to_id,
-#         "reply_to_data":   reply_to_data,
-#         "is_pinned":       msg.is_pinned,
-#         "is_deleted":      msg.is_deleted,
-#         "file_url":        msg.file.url if msg.file else None,
-#         "file_name":       msg.file.name.split("/")[-1] if msg.file else None,
-#     }
-
-#     async_to_sync(channel_layer.group_send)(group_name, payload)
-#     return payload
-
 
 def send_message(user, conversation, content, msg_type="text", reply_to=None):
     msg = Message.objects.create(

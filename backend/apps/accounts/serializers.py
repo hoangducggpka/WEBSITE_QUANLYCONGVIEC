@@ -61,22 +61,23 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source="user.email", required=False)
+    email    = serializers.EmailField(source="user.email", required=False)
     user_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
-        model = UserProfile
-        fields = ["fullname", "address", "phone", "user_code", "email"]
+        model  = UserProfile
+        fields = ["fullname", "address", "phone", "user_code", "email"]  # user_code đã có sẵn
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", {})
 
-        # update User
-        if "email" in validated_data:
-            instance.user.email = validated_data["email"]
+        # Cập nhật email trên User model
+        new_email = validated_data.pop("email", None)
+        if new_email is not None:
+            instance.user.email = new_email
             instance.user.save()
 
-        # update Profile
+        # Cập nhật tất cả field còn lại kể cả user_code
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 

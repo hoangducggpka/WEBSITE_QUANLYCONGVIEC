@@ -54,7 +54,7 @@ class ConversationListView(APIView):
         conversations = (
             Conversation.objects
             .filter(members__user=request.user)
-            .select_related("group")
+            .select_related("group__leader__profile")   # ← thêm leader__profile
             .prefetch_related("members__user__profile", "messages")
             .order_by("-created_at")
         )
@@ -62,6 +62,18 @@ class ConversationListView(APIView):
             conversations, many=True, context={"request": request}
         )
         return Response(serializer.data)
+    # def get(self, request):
+    #     conversations = (
+    #         Conversation.objects
+    #         .filter(members__user=request.user)
+    #         .select_related("group")
+    #         .prefetch_related("members__user__profile", "messages")
+    #         .order_by("-created_at")
+    #     )
+    #     serializer = ConversationSerializer(
+    #         conversations, many=True, context={"request": request}
+    #     )
+    #     return Response(serializer.data)
 
     def post(self, request):
         target_user_id = request.data.get("user_id")

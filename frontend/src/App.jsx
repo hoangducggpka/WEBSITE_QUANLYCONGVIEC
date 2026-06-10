@@ -3,7 +3,7 @@ import ProtectedRoute from "./component/ProtectedRoute";
 import MainLayout from "./MainLayout";
 import Login from "./page/Login";
 import { useAuth } from "./context/AuthContext";
-import SecurityLayout from "./SecurityLayout";
+
 function App() {
     const { loading } = useAuth();
 
@@ -12,15 +12,6 @@ function App() {
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
-
-            <Route
-                path="/security/*"
-                element={
-                    <ProtectedRoute adminOnly>
-                        <SecurityLayout />
-                    </ProtectedRoute>
-                }
-            />
 
             <Route
                 path="/*"

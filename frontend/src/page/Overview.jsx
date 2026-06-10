@@ -262,7 +262,9 @@ function Overview() {
                     <p>{item.computed_status}</p>
                   </div>
                   <button className={styles.project_button}>
-                    <FaChevronRight />
+                    <FaChevronRight  onClick={() => {
+                    navigate(`/project-detail/${item.uuid}`);
+                }} />
                   </button>
                 </div>
 
@@ -311,6 +313,9 @@ function Overview() {
                 initial={{ opacity: 0, y: 25 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.08, duration: 0.2 }}
+                onClick={() => {
+                    navigate(`/tasks/`);
+                }}
               >
                 <div
                   className={styles.progress_circle}
@@ -371,7 +376,7 @@ function Overview() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03 }}
-                onClick={(uuid) => {
+                onClick={() => {
                     navigate(`/project-detail/${item.project?.uuid}`);
                 }}
               >
@@ -389,7 +394,10 @@ function Overview() {
 
                 <button
                   className={styles.delete_activity}
-                  onClick={() => handleDeleteActivity(item.id)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // chặn bubble lên motion.div
+                    handleDeleteActivity(item.id);
+                  }}
                 >
                   ×
                 </button>

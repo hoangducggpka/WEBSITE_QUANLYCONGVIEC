@@ -38,7 +38,6 @@ const QUICK_FILTERS = [
     { key: "inprogress",label: "Đang làm"    },
     { key: "in_review", label: "Chờ duyệt"   },
     { key: "done",      label: "Hoàn thành"  },
-    { key: "need_help", label: "Cần hỗ trợ"  },
     { key: "overdue",   label: "Quá hạn"     },
 ];
 
@@ -206,9 +205,6 @@ function TaskCard({ task, index, onOpenProgress, onToggleHelp, helpLoading }) {
                 </span>
 
                 <div className={styles.flags}>
-                    {task.need_help && (
-                        <span className={styles.flag_help} title="Đang cần hỗ trợ">🆘</span>
-                    )}
                     {isOverdue && (
                         <span className={styles.flag_overdue} title="Quá hạn">🔴</span>
                     )}
@@ -227,14 +223,14 @@ function TaskCard({ task, index, onOpenProgress, onToggleHelp, helpLoading }) {
                     </button>
                 )}
 
-                <button
+                {/* <button
                     className={`${styles.btn_help} ${task.need_help ? styles.btn_help_active : ""}`}
                     onClick={() => onToggleHelp(task)}
                     disabled={helpLoading === task.uuid}
                     title={task.need_help ? "Hủy yêu cầu hỗ trợ" : "Yêu cầu hỗ trợ từ Leader"}
                 >
                     {task.need_help ? "🆘 Đang cần help" : "🙋 Help"}
-                </button>
+                </button> */}
 
                 <button
                     className={styles.btn_detail}
@@ -415,7 +411,7 @@ export default function Tasks() {
             doing:     tasks.filter(t => { const s = t.status; return s === "inprogress"; }).length,
             review:    tasks.filter(t => t.status === "in_review").length,
             overdue:   tasks.filter(isOverdue).length,
-            need_help: tasks.filter(t => t.need_help).length,
+            // need_help: tasks.filter(t => t.need_help).length,
             done:      tasks.filter(t => t.status === "done").length,
         };
     }, [tasks]);
@@ -428,7 +424,7 @@ export default function Tasks() {
             case "inprogress": return tasks.filter(t => t.status === "inprogress").length;
             case "in_review":  return tasks.filter(t => t.status === "in_review").length;
             case "done":       return tasks.filter(t => t.status === "done").length;
-            case "need_help":  return tasks.filter(t => t.need_help).length;
+            // case "need_help":  return tasks.filter(t => t.need_help).length;
             case "overdue":    return tasks.filter(isOverdue).length;
             default:           return 0;
         }
@@ -445,7 +441,6 @@ export default function Tasks() {
                     { label: "Đang làm",    value: stats.doing,     cls: "stat_doing"   },
                     { label: "Chờ duyệt",   value: stats.review,    cls: "stat_review"  },
                     { label: "Quá hạn",     value: stats.overdue,   cls: "stat_overdue" },
-                    { label: "Cần hỗ trợ",  value: stats.need_help, cls: "stat_help"    },
                     { label: "Hoàn thành",  value: stats.done,      cls: "stat_done"    },
                 ].map(s => (
                     <div key={s.label} className={`${styles.stat_card} ${styles[s.cls]}`}>

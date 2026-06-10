@@ -1,52 +1,11 @@
-import styles from "./Profile.module.css";
+import styles from "./Profile2.module.css";
 import { useState, useRef, useEffect, useCallback } from "react";
-
+import { apiFetch } from "../utils/api";
 // ──────────────────────────────────────────────
 // CONSTANTS
 // ──────────────────────────────────────────────
 const CROP_SIZE = 260;
-const API_BASE  = import.meta.env.VITE_API_URL ?? "";
-
-// ──────────────────────────────────────────────
-// FAKE DATA
-// ──────────────────────────────────────────────
-const INITIAL_USER = {
-  uuid:              "28249800-c246-46bb-ae67-3d4cd6dccca9",
-  username:          "anh123",
-  email:             "anh@example.com",
-  user_code:         "CQ15DH0182",
-  fullname:          "Nguyen Van Anh",
-  address:           "Quảng Ninh",
-  phone:             "0123456789",
-  avatarpath:        "",
-  reliability_score: 78,
-  joined_at:         "2024-09-01",
-  role:              "Frontend Developer",
-};
-
-const FAKE_PROJECTS = [
-  { id: 1, name: "E-commerce Platform",   status: "active",    progress: 72, role: "Frontend Lead", taskCount: 12, deadline: "2026-07-15", color: "#00e5bb" },
-  { id: 2, name: "CRM System",            status: "completed", progress: 100, role: "Fullstack Dev",  taskCount: 18, deadline: "2026-04-30", color: "#6366f1" },
-  { id: 3, name: "Mobile App MVP",        status: "active",    progress: 38, role: "UI/UX + Dev",    taskCount: 9,  deadline: "2026-08-01", color: "#f59e0b" },
-  { id: 4, name: "Internal Tool v2",      status: "paused",    progress: 51, role: "Backend Dev",    taskCount: 7,  deadline: "2026-09-10", color: "#a78bfa" },
-];
-
-const FAKE_TASKS = [
-  // Active
-  { id: 1, title: "Thiết kế UI Dashboard",        project: "E-commerce Platform", projectId: 1, progress: 65, priority: "high",   dueDate: "2026-05-30", status: "doing" },
-  { id: 2, title: "Xây dựng API Authentication",   project: "E-commerce Platform", projectId: 1, progress: 0,  priority: "urgent", dueDate: "2026-05-28", status: "todo" },
-  { id: 3, title: "Fix responsive mobile",          project: "Mobile App MVP",      projectId: 3, progress: 45, priority: "medium", dueDate: "2026-06-05", status: "doing" },
-  { id: 4, title: "Tối ưu database queries",       project: "Internal Tool v2",    projectId: 4, progress: 70, priority: "high",   dueDate: "2026-06-01", status: "doing" },
-  // Completed / History
-  { id: 5,  title: "Deploy production",             project: "CRM System", projectId: 2, progress: 100, priority: "high",   dueDate: "2026-04-15", completedAt: "2026-04-14", status: "done" },
-  { id: 6,  title: "Database schema design",        project: "CRM System", projectId: 2, progress: 100, priority: "high",   dueDate: "2026-03-20", completedAt: "2026-03-19", status: "done" },
-  { id: 7,  title: "User authentication module",   project: "CRM System", projectId: 2, progress: 100, priority: "urgent", dueDate: "2026-03-10", completedAt: "2026-03-08", status: "done" },
-  { id: 8,  title: "API endpoint design",           project: "CRM System", projectId: 2, progress: 100, priority: "medium", dueDate: "2026-02-28", completedAt: "2026-02-26", status: "done" },
-  { id: 9,  title: "Viết tài liệu kỹ thuật",      project: "CRM System", projectId: 2, progress: 100, priority: "low",    dueDate: "2026-04-25", completedAt: "2026-04-23", status: "done" },
-  { id: 10, title: "Setup CI/CD pipeline",          project: "CRM System", projectId: 2, progress: 100, priority: "urgent", dueDate: "2026-01-10", completedAt: "2026-01-09", status: "done" },
-];
-
-const INIT_SKILLS = ["React", "TypeScript", "Node.js", "Python", "CSS/SCSS", "REST API", "Git", "Docker"];
+const API_BASE = "http://127.0.0.1:8000";
 
 // ──────────────────────────────────────────────
 // HELPERS
@@ -54,65 +13,32 @@ const INIT_SKILLS = ["React", "TypeScript", "Node.js", "Python", "CSS/SCSS", "RE
 const getInitials = (name = "") =>
   name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
-const fmtDate = (d) => {
-  if (!d) return "—";
-  const dt = new Date(d);
-  return `${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${dt.getFullYear()}`;
+const LEVEL_LABELS = {
+  1: "Beginner",
+  2: "Junior",
+  3: "Intermediate",
+  4: "Advanced",
+  5: "Expert",
 };
 
-const PRIORITY_MAP = {
-  urgent: { label: "Khẩn cấp", color: "#ff4545" },
-  high:   { label: "Cao",       color: "#ff8c44" },
-  medium: { label: "Trung bình",color: "#ffd644" },
-  low:    { label: "Thấp",      color: "#44e87e" },
-};
-
-const STATUS_MAP = {
-  todo:    { label: "Chưa làm",   color: "#6b6b78" },
-  doing:   { label: "Đang làm",   color: "#38bdf8" },
-  done:    { label: "Hoàn thành", color: "#44e87e" },
-  review:  { label: "Chờ review", color: "#a78bfa" },
+const LEVEL_COLORS = {
+  1: "#94a3b8",
+  2: "#60a5fa",
+  3: "#34d399",
+  4: "#f59e0b",
+  5: "#f43f5e",
 };
 
 // ──────────────────────────────────────────────
-// SUBCOMPONENTS
+// CROP MODAL
 // ──────────────────────────────────────────────
-
-function StatRing({ value, max = 100, size = 72, stroke = 6, color = "#00e5bb", label }) {
-  const r    = (size - stroke * 2) / 2;
-  const circ = 2 * Math.PI * r;
-  const pct  = Math.min(value / max, 1);
-  const dash = circ * pct;
-
-  return (
-    <div className={styles.ring_wrap}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size/2} cy={size/2} r={r} stroke="#242428" strokeWidth={stroke} fill="none"/>
-        <circle
-          cx={size/2} cy={size/2} r={r}
-          stroke={color} strokeWidth={stroke} fill="none"
-          strokeDasharray={`${dash} ${circ}`}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 0.8s ease" }}
-        />
-      </svg>
-      <div className={styles.ring_center}>
-        <span className={styles.ring_value} style={{ color }}>{value}</span>
-        <span className={styles.ring_max}>/{max}</span>
-      </div>
-      {label && <span className={styles.ring_label}>{label}</span>}
-    </div>
-  );
-}
-
 function CropModal({ src, onSave, onClose }) {
-  const [offset, setOffset]     = useState({ x: 0, y: 0 });
-  const [scale, setScale]       = useState(1);
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [offset,     setOffset]     = useState({ x: 0, y: 0 });
+  const [scale,      setScale]      = useState(1);
+  const [dragging,   setDragging]   = useState(false);
+  const [dragStart,  setDragStart]  = useState({ x: 0, y: 0 });
   const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
-  const [saving, setSaving] = useState(false);
-  const imgRef = useRef();
+  const [saving,     setSaving]     = useState(false);
 
   useEffect(() => {
     const img = new window.Image();
@@ -147,16 +73,13 @@ function CropModal({ src, onSave, onClose }) {
     canvas.width  = CROP_SIZE;
     canvas.height = CROP_SIZE;
     const ctx = canvas.getContext("2d");
-
     ctx.beginPath();
     ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
     ctx.clip();
-
     const img = new window.Image();
     img.src = src;
     await new Promise((res) => { img.onload = res; img.onerror = res; });
     ctx.drawImage(img, offset.x, offset.y, imgNatural.w * scale, imgNatural.h * scale);
-
     canvas.toBlob((blob) => onSave(blob), "image/jpeg", 0.92);
   };
 
@@ -177,28 +100,19 @@ function CropModal({ src, onSave, onClose }) {
           onMouseLeave={onMouseUp}
         >
           <img
-            ref={imgRef}
             src={src}
             alt="crop"
             draggable={false}
             style={{
               position: "absolute",
               left: offset.x,
-              top:  offset.y,
-              width:  imgNatural.w * scale,
+              top: offset.y,
+              width: imgNatural.w * scale,
               height: imgNatural.h * scale,
               userSelect: "none",
             }}
           />
           <div className={styles.crop_mask} />
-          <div className={styles.crop_grid}>
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className={styles.crop_grid_line} style={{ left: `${(i+1)*25}%`, top: 0, width: 1, height: "100%" }} />
-            ))}
-            {[...Array(4)].map((_, i) => (
-              <div key={i+4} className={styles.crop_grid_line} style={{ top: `${(i+1)*25}%`, left: 0, height: 1, width: "100%" }} />
-            ))}
-          </div>
         </div>
 
         <div className={styles.crop_controls}>
@@ -224,125 +138,433 @@ function CropModal({ src, onSave, onClose }) {
 }
 
 // ──────────────────────────────────────────────
+// RELIABILITY SCORE RING
+// ──────────────────────────────────────────────
+function ReliabilityRing({ value, max = 100 }) {
+  const size   = 96;
+  const stroke = 7;
+  const r      = (size - stroke * 2) / 2;
+  const circ   = 2 * Math.PI * r;
+  const pct    = Math.min(value / max, 1);
+  const dash   = circ * pct;
+
+  const color =
+    value >= 8 ? "#10b981" :
+    value >= 5 ? "#f59e0b" :
+                  "#ef4444";
+
+  const label =
+    value >= 8 ? "Đáng tin cậy" :
+    value >= 5 ? "Trung bình" :
+                  "Cần cải thiện";
+
+  return (
+    <div className={styles.ring_block}>
+      <div className={styles.ring_wrap}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={size/2} cy={size/2} r={r} stroke="#e2e8f0" strokeWidth={stroke} fill="none"/>
+          <circle
+            cx={size/2} cy={size/2} r={r}
+            stroke={color} strokeWidth={stroke} fill="none"
+            strokeDasharray={`${dash} ${circ}`}
+            strokeLinecap="round"
+            style={{ transition: "stroke-dasharray 0.8s ease" }}
+          />
+        </svg>
+        <div className={styles.ring_inner}>
+          <span className={styles.ring_value} style={{ color }}>{value}</span>
+          <span className={styles.ring_of}>/{max}</span>
+        </div>
+      </div>
+      <div className={styles.ring_meta}>
+        <span className={styles.ring_title}>Điểm tin cậy</span>
+        <span className={styles.ring_label} style={{ color }}>{label}</span>
+        <p className={styles.ring_hint}>
+          Điểm được tính tự động dựa trên lịch sử hoàn thành task, độ đúng hạn và đánh giá từ thành viên khác.
+        </p>
+      </div>
+    </div>
+  );
+}
+function PasswordModal({
+  form,
+  setForm,
+  onClose,
+  onSubmit,
+  loading,
+}) {
+  return (
+    <div className={styles.crop_overlay} onClick={onClose}>
+      <div
+        className={styles.password_modal}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.crop_header}>
+          <span className={styles.crop_title}>Đổi mật khẩu</span>
+          <button className={styles.crop_close} onClick={onClose}>
+            ✕
+          </button>
+        </div>
+
+        <div className={styles.password_body}>
+          <div className={styles.password_group}>
+            <label>Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value })
+              }
+            />
+          </div>
+
+          <div className={styles.password_group}>
+            <label>Mật khẩu hiện tại</label>
+            <input
+              type="password"
+              value={form.old_password}
+              onChange={(e) =>
+                setForm({ ...form, old_password: e.target.value })
+              }
+            />
+          </div>
+
+          <div className={styles.password_group}>
+            <label>Mật khẩu mới</label>
+            <input
+              type="password"
+              value={form.new_password}
+              onChange={(e) =>
+                setForm({ ...form, new_password: e.target.value })
+              }
+            />
+          </div>
+
+          <div className={styles.password_group}>
+            <label>Nhập lại mật khẩu mới</label>
+            <input
+              type="password"
+              value={form.confirm_password}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  confirm_password: e.target.value,
+                })
+              }
+            />
+          </div>
+        </div>
+
+        <div className={styles.crop_footer}>
+          <button
+            className={styles.crop_cancel_btn}
+            onClick={onClose}
+          >
+            Hủy
+          </button>
+
+          <button
+            className={styles.crop_save_btn}
+            onClick={onSubmit}
+            disabled={loading}
+          >
+            {loading ? "Đang đổi..." : "Đổi mật khẩu"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ──────────────────────────────────────────────
 // MAIN COMPONENT
 // ──────────────────────────────────────────────
 function Profile() {
-  const [user,          setUser]          = useState(INITIAL_USER);
-  const [editUser,      setEditUser]      = useState(INITIAL_USER);
-  const [editMode,      setEditMode]      = useState(false);
-  const [skills,        setSkills]        = useState(INIT_SKILLS);
-  const [newSkill,      setNewSkill]      = useState("");
-  const [editSkillIdx,  setEditSkillIdx]  = useState(null);
-  const [editSkillVal,  setEditSkillVal]  = useState("");
-  const [cropSrc,       setCropSrc]       = useState(null);
-  const [avatarUrl,     setAvatarUrl]     = useState("");
-  const [avatarError,   setAvatarError]   = useState(false);
-  const [historyTab,    setHistoryTab]    = useState("history");
-  const [copied,        setCopied]        = useState(false);
-  const [toast,         setToast]         = useState(null);
-  const [savingInfo,    setSavingInfo]    = useState(false);
+  // ── State: user data from API ──
+  const [user,        setUser]        = useState(null);
+  const [loading,     setLoading]     = useState(true);
 
+  // ── State: edit mode ──
+  const [editMode,    setEditMode]    = useState(false);
+  const [editUser,    setEditUser]    = useState({});
+  const [savingInfo,  setSavingInfo]  = useState(false);
+
+  // ── State: avatar ──
+  const [cropSrc,     setCropSrc]     = useState(null);
+  const [avatarUrl,   setAvatarUrl]   = useState("");
+  const [avatarError, setAvatarError] = useState(false);
   const fileInputRef = useRef();
 
-  const activeTasks    = FAKE_TASKS.filter((t) => t.status !== "done");
-  const completedTasks = FAKE_TASKS.filter((t) => t.status === "done");
-  const completionRate = Math.round((completedTasks.length / FAKE_TASKS.length) * 100);
-  const activeProjects = FAKE_PROJECTS.filter((p) => p.status === "active").length;
+  // ── State: skills ──
+  const [skills,       setSkills]       = useState([]);
+  const [loadingSkills,setLoadingSkills]= useState(true);
+  const [newSkill,     setNewSkill]     = useState("");
+  const [newLevel,     setNewLevel]     = useState(1);
+  const [addingSkill,  setAddingSkill]  = useState(false);
+  const [editSkillIdx, setEditSkillIdx] = useState(null);
+  const [editSkillVal, setEditSkillVal] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
-  // ── Toast helper ──
+  const [passwordForm, setPasswordForm] = useState({
+    email: "",
+    old_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  // ── Toast ──
+  const [toast, setToast] = useState(null);
+
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2800);
   };
+  const handleChangePassword = async () => {
+    if (
+      !passwordForm.email ||
+      !passwordForm.old_password ||
+      !passwordForm.new_password
+    ) {
+      showToast("Vui lòng nhập đầy đủ thông tin", "error");
+      return;
+    }
 
-  // ── Copy user_code ──
-  const copyCode = () => {
-    navigator.clipboard.writeText(user.user_code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    if (
+      passwordForm.new_password !==
+      passwordForm.confirm_password
+    ) {
+      showToast("Mật khẩu xác nhận không khớp", "error");
+      return;
+    }
+
+    if (passwordForm.new_password.length < 6) {
+      showToast(
+        "Mật khẩu mới phải có ít nhất 6 ký tự",
+        "error"
+      );
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const res = await apiFetch(
+        "/accounts/change-password/",
+        {
+          method: "POST",
+          headers: {},
+          body: JSON.stringify({
+            email: passwordForm.email,
+            current_password:
+              passwordForm.old_password,
+            new_password:
+              passwordForm.new_password,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Đổi mật khẩu thành công ✓");
+
+        setPasswordForm({
+          email: user.email || "",
+          old_password: "",
+          new_password: "",
+          confirm_password: "",
+        });
+
+        setShowPasswordModal(false);
+
+        // Nếu muốn bắt user đăng nhập lại:
+        // localStorage.removeItem("access");
+        // localStorage.removeItem("refresh");
+        // navigate("/login");
+      } else {
+        showToast(
+          data.error || "Đổi mật khẩu thất bại",
+          "error"
+        );
+      }
+    } catch {
+      showToast("Lỗi kết nối server", "error");
+    } finally {
+      setChangingPassword(false);
+    }
   };
+  // ── Fetch profile on mount ──
+  useEffect(() => {
+    apiFetch(`/accounts/me/`, {
+      headers: {},
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setUser(data);
+        setEditUser(data);
+        if (data.avatarpath) setAvatarUrl(`${API_BASE}${data.avatarpath}`);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
-  // ── Avatar file pick ──
+  // ── Fetch skills on mount ──
+  useEffect(() => {
+    apiFetch(`/skills/my-skills/`, {
+      headers: {},
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setSkills(Array.isArray(data) ? data : []);
+        setLoadingSkills(false);
+      })
+      .catch(() => setLoadingSkills(false));
+  }, []);
+
+  // ── Avatar: pick file → crop ──
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setCropSrc(url);
+    setCropSrc(URL.createObjectURL(file));
     e.target.value = "";
   };
 
-  // ── Avatar save (crop → API) ──
+  // ── Avatar: crop save → API ──
   const handleCropSave = async (blob) => {
-    const preview = URL.createObjectURL(blob);
-    setAvatarUrl(preview);
+    setAvatarUrl(URL.createObjectURL(blob));
     setAvatarError(false);
     setCropSrc(null);
-
     const formData = new FormData();
     formData.append("avatarpath", blob, "avatar.jpg");
     try {
-      const res = await fetch(`${API_BASE}/api/profile/avatar/`, {
+      const res = await apiFetch(`/accounts/profile/avatar/`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("access_token") ?? ""}` },
+        headers: {},
         body: formData,
       });
       if (res.ok) {
         const data = await res.json();
-        setAvatarUrl(data.avatar);
+        setAvatarUrl(`${API_BASE}${data.avatar}`);
         showToast("Ảnh đại diện đã được cập nhật ✓");
       } else {
-        showToast("Upload thất bại, vui lòng thử lại", "error");
+        showToast("Upload thất bại", "error");
       }
     } catch {
       showToast("Lỗi kết nối server", "error");
     }
   };
 
-  // ── Save user info (placeholder PUT) ──
+  // ── Save profile info ──
   const handleSaveInfo = async () => {
     setSavingInfo(true);
-    await new Promise((r) => setTimeout(r, 600)); // simulate API
-    setUser(editUser);
-    setEditMode(false);
-    setSavingInfo(false);
-    showToast("Thông tin đã được cập nhật ✓");
+    try {
+      const res = await apiFetch(`/accounts/profile/`, {
+        method: "PATCH",
+        headers: {
+
+        },
+        body: JSON.stringify({
+          fullname: editUser.fullname,
+          email:    editUser.email,
+          phone:    editUser.phone,
+          address:  editUser.address,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setUser({ ...user, ...updated });
+        setEditMode(false);
+        showToast("Thông tin đã được cập nhật ✓");
+      } else {
+        showToast("Cập nhật thất bại", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối server", "error");
+    } finally {
+      setSavingInfo(false);
+    }
   };
 
-  // ── Skills ──
-  const addSkill = () => {
-    const s = newSkill.trim();
-    if (!s || skills.includes(s)) return;
-    setSkills([...skills, s]);
-    setNewSkill("");
+  // ── Add skill ──
+  const handleAddSkill = async () => {
+    const name = newSkill.trim();
+    if (!name) return;
+    setAddingSkill(true);
+    try {
+      const res = await apiFetch(`/skills/create/`, {
+        method: "POST",
+        headers: {
+        },
+        body: JSON.stringify({ name, level: newLevel }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSkills([...skills, data]);
+        setNewSkill("");
+        setNewLevel(1);
+        showToast(`Đã thêm "${name}" ✓`);
+      } else {
+        showToast(data.error ?? "Thêm skill thất bại", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối server", "error");
+    } finally {
+      setAddingSkill(false);
+    }
   };
 
-  const removeSkill = (idx) => setSkills(skills.filter((_, i) => i !== idx));
-
-  const startEditSkill = (idx) => {
-    setEditSkillIdx(idx);
-    setEditSkillVal(skills[idx]);
-  };
-
-  const saveEditSkill = () => {
-    const s = editSkillVal.trim();
-    if (!s) return;
-    setSkills(skills.map((sk, i) => (i === editSkillIdx ? s : sk)));
-    setEditSkillIdx(null);
+  // ── Delete skill ──
+  const handleDeleteSkill = async (skill) => {
+    try {
+      const res = await apiFetch(`/skills/delete/${skill.skill_uuid}/`, {
+        method: "DELETE",
+        headers: {},
+      });
+      if (res.ok) {
+        setSkills(skills.filter((s) => s.skill_uuid !== skill.skill_uuid));
+        showToast(`Đã xóa "${skill.name}"`);
+      } else {
+        showToast("Xóa thất bại", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối server", "error");
+    }
   };
 
   // ──────────────────────────────────────────────
   // RENDER
   // ──────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className={styles.loading_screen}>
+        <div className={styles.spinner} />
+        <span>Đang tải...</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className={styles.loading_screen}>
+        <span className={styles.error_msg}>Không thể tải hồ sơ. Vui lòng đăng nhập lại.</span>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
 
       {/* ── CROP MODAL ── */}
       {cropSrc && (
-        <CropModal
-          src={cropSrc}
-          onSave={handleCropSave}
-          onClose={() => setCropSrc(null)}
+        <CropModal src={cropSrc} onSave={handleCropSave} onClose={() => setCropSrc(null)} />
+      )}
+      {showPasswordModal && (
+        <PasswordModal
+          form={passwordForm}
+          setForm={setPasswordForm}
+          onClose={() => setShowPasswordModal(false)}
+          onSubmit={handleChangePassword}
+          loading={changingPassword}
         />
       )}
 
@@ -354,299 +576,245 @@ function Profile() {
       )}
 
       {/* ─────────────────────────────────────
-          TOP STRIP: Avatar + Name + Quick Stats
+          HEADER: Avatar + Identity
           ───────────────────────────────────── */}
-      <div className={styles.top_strip}>
-
-        {/* AVATAR + IDENTITY */}
-        <div className={styles.identity_card}>
-          <div className={styles.avatar_wrap}>
-            <div className={styles.avatar_circle}>
-              {(!avatarUrl || avatarError) && (
-                <span className={styles.avatar_initials}>{getInitials(user.fullname)}</span>
-              )}
-              {avatarUrl && !avatarError && (
-                <img
-                  src={avatarUrl}
-                  className={styles.avatar_img}
-                  alt="avatar"
-                  onError={() => setAvatarError(true)}
-                />
-              )}
-            </div>
-            <button className={styles.avatar_btn} onClick={() => fileInputRef.current?.click()} title="Đổi ảnh">
-              <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
-                <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+      <div className={styles.header_card}>
+        {/* Avatar */}
+        <div className={styles.avatar_wrap}>
+          <div className={styles.avatar_circle}>
+            {(!avatarUrl || avatarError) && (
+              <span className={styles.avatar_initials}>{getInitials(user.fullname)}</span>
+            )}
+            {avatarUrl && !avatarError && (
+              <img
+                src={avatarUrl}
+                className={styles.avatar_img}
+                alt="avatar"
+                onError={() => setAvatarError(true)}
+              />
+            )}
           </div>
-
-          <div className={styles.identity_info}>
-            <h2 className={styles.fullname}>{user.fullname}</h2>
-            <span className={styles.role_tag}>{user.role}</span>
-            <div className={styles.code_row}>
-              <span className={styles.code_label}>@{user.username}</span>
-              <span className={styles.code_sep}>•</span>
-              <span className={styles.user_code}>{user.user_code}</span>
-              <button className={styles.copy_btn} onClick={copyCode} title="Copy">
-                {copied ? "✓" : "⎘"}
-              </button>
-            </div>
-            <span className={styles.joined_at}>Tham gia {fmtDate(user.joined_at)}</span>
-          </div>
+          <button
+            className={styles.avatar_btn}
+            onClick={() => fileInputRef.current?.click()}
+            title="Đổi ảnh"
+          >
+            <svg viewBox="0 0 16 16" fill="none" width="11" height="11">
+              <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
         </div>
 
-        {/* QUICK STATS */}
-        <div className={styles.quick_stats}>
-          {[
-            { label: "Tổng tasks",    value: FAKE_TASKS.length,    color: "#818cf8" },
-            { label: "Hoàn thành",    value: completedTasks.length, color: "#44e87e" },
-            { label: "Dự án active",  value: activeProjects,        color: "#00e5bb" },
-            { label: "Tỷ lệ hoàn thành", value: `${completionRate}%`, color: "#f59e0b" },
-          ].map((s) => (
-            <div key={s.label} className={styles.qstat}>
-              <span className={styles.qstat_value} style={{ color: s.color }}>{s.value}</span>
-              <span className={styles.qstat_label}>{s.label}</span>
-            </div>
-          ))}
+        {/* Identity */}
+        <div className={styles.identity}>
+          <h1 className={styles.fullname}>{user.fullname}</h1>
+          <button
+            className={styles.changePasswordBtn}
+            onClick={() => {
+              setPasswordForm({
+                email: user.email || "",
+                old_password: "",
+                new_password: "",
+                confirm_password: "",
+              });
+              setShowPasswordModal(true);
+            }}
+          >
+            🔒 Đổi mật khẩu
+          </button>
+          <div className={styles.meta_row}>
+            <span className={styles.username}>@{user.username}</span>
+            {user.user_code && (
+              <>
+                <span className={styles.dot}>·</span>
+                <span className={styles.user_code}>{user.user_code}</span>
+              </>
+            )}
+          </div>
+          <span className={styles.email_chip}>{user.email}</span>
         </div>
       </div>
 
       {/* ─────────────────────────────────────
-          MAIN CONTENT: Left panel + Right panel
+          BODY: Two columns
           ───────────────────────────────────── */}
-      <div className={styles.main}>
+      <div className={styles.body}>
 
-        {/* ──── LEFT PANEL ──── */}
-        <div className={styles.left_panel}>
+        {/* ── LEFT: Personal info + Reliability ── */}
+        <div className={styles.left_col}>
 
-          {/* ── User Info Card ── */}
+          {/* Personal Info Card */}
           <div className={styles.card}>
             <div className={styles.card_header}>
               <span className={styles.card_title}>Thông tin cá nhân</span>
+
               {!editMode ? (
-                <button className={styles.icon_btn} onClick={() => { setEditMode(true); setEditUser(user); }}>
-                  <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                    <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                <button className={styles.edit_btn} onClick={() => { setEditMode(true); setEditUser({ ...user }); }}>
+                  <svg viewBox="0 0 16 16" fill="none" width="11" height="11">
+                    <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
                   </svg>
-                  Sửa
+                  Chỉnh sửa
                 </button>
+                
               ) : (
-                <div className={styles.edit_actions}>
+                <div className={styles.action_row}>
                   <button className={styles.cancel_btn} onClick={() => setEditMode(false)}>Hủy</button>
                   <button className={styles.save_btn} onClick={handleSaveInfo} disabled={savingInfo}>
-                    {savingInfo ? "..." : "Lưu"}
+                    {savingInfo ? "Đang lưu..." : "Lưu thay đổi"}
                   </button>
                 </div>
               )}
             </div>
 
-            <div className={styles.info_list}>
+            <div className={styles.info_grid}>
               {[
-                { key: "fullname", icon: "👤", label: "Họ tên" },
-                { key: "email",    icon: "✉️", label: "Email" },
-                { key: "phone",    icon: "📞", label: "Điện thoại" },
-                { key: "address",  icon: "📍", label: "Địa chỉ" },
-              ].map(({ key, icon, label }) => (
-                <div key={key} className={styles.info_row}>
-                  <span className={styles.info_icon}>{icon}</span>
-                  <div className={styles.info_content}>
+                { key: "fullname", icon: "👤", label: "Họ và tên",     type: "text"  },
+                { key: "email",    icon: "✉️",  label: "Email",          type: "email" },
+                { key: "phone",    icon: "📞",  label: "Số điện thoại", type: "tel"   },
+                { key: "address",  icon: "📍",  label: "Địa chỉ",       type: "text"  },
+              ].map(({ key, icon, label, type }) => (
+                <div key={key} className={styles.info_item}>
+                  <div className={styles.info_label_row}>
+                    <span className={styles.info_icon}>{icon}</span>
                     <span className={styles.info_label}>{label}</span>
-                    {editMode ? (
-                      <input
-                        className={styles.info_input}
-                        value={editUser[key]}
-                        onChange={(e) => setEditUser({ ...editUser, [key]: e.target.value })}
-                      />
-                    ) : (
-                      <span className={styles.info_value}>{user[key]}</span>
-                    )}
                   </div>
+                  {editMode ? (
+                    <input
+                      className={styles.info_input}
+                      type={type}
+                      value={editUser[key] ?? ""}
+                      onChange={(e) => setEditUser({ ...editUser, [key]: e.target.value })}
+                    />
+                  ) : (
+                    <span className={styles.info_value}>{user[key] || "—"}</span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* ── Stats Card ── */}
+          {/* Reliability Card */}
           <div className={styles.card}>
             <div className={styles.card_header}>
-              <span className={styles.card_title}>Chỉ số cá nhân</span>
+              <span className={styles.card_title}>Điểm tin cậy</span>
             </div>
-            <div className={styles.stats_rings}>
-              <StatRing value={user.reliability_score} max={100} color="#f59e0b" label="Reliability" />
-              <StatRing value={completionRate}          max={100} color="#00e5bb" label="Completion" />
-              <StatRing value={activeProjects}          max={FAKE_PROJECTS.length} size={72} color="#a78bfa" label="Projects" />
-            </div>
-            <div className={styles.stat_badges}>
-              {user.reliability_score >= 70 && <span className={styles.badge_gold}>⭐ Đáng tin cậy</span>}
-              {completionRate >= 80            && <span className={styles.badge_green}>🎯 Hiệu suất cao</span>}
-              {activeProjects >= 2             && <span className={styles.badge_blue}>🚀 Đa dự án</span>}
-            </div>
+            <ReliabilityRing value={user.reliability_score ?? 0} max={10} />
           </div>
 
-          {/* ── Skills Card ── */}
-          <div className={styles.card}>
+        </div>
+
+        {/* ── RIGHT: Skills ── */}
+        <div className={styles.right_col}>
+          <div className={`${styles.card} ${styles.card_stretch}`}>
             <div className={styles.card_header}>
               <span className={styles.card_title}>Kỹ năng</span>
-              <span className={styles.skill_count}>{skills.length} skills</span>
+              <span className={styles.skill_count_badge}>{skills.length} skills</span>
             </div>
-            <div className={styles.skills_wrap}>
-              {skills.map((sk, i) => (
-                editSkillIdx === i ? (
-                  <div key={i} className={styles.skill_edit_wrap}>
-                    <input
-                      className={styles.skill_edit_input}
-                      value={editSkillVal}
-                      onChange={(e) => setEditSkillVal(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && saveEditSkill()}
-                      autoFocus
-                    />
-                    <button className={styles.skill_save} onClick={saveEditSkill}>✓</button>
-                    <button className={styles.skill_cancel} onClick={() => setEditSkillIdx(null)}>✕</button>
-                  </div>
-                ) : (
-                  <div key={i} className={styles.skill_chip}>
-                    <span>{sk}</span>
-                    <button className={styles.skill_edit_btn} onClick={() => startEditSkill(i)} title="Sửa">✎</button>
-                    <button className={styles.skill_del_btn} onClick={() => removeSkill(i)} title="Xóa">✕</button>
-                  </div>
-                )
-              ))}
-            </div>
-            <div className={styles.skill_add_row}>
+
+            {/* Add skill row */}
+            <div className={styles.add_skill_row}>
               <input
-                className={styles.skill_add_input}
-                placeholder="Thêm skill mới..."
+                className={styles.skill_name_input}
+                placeholder="Tên skill mới..."
                 value={newSkill}
                 onChange={(e) => setNewSkill(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addSkill()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddSkill()}
               />
-              <button className={styles.skill_add_btn} onClick={addSkill}>+</button>
+              <select
+                className={styles.level_select}
+                value={newLevel}
+                onChange={(e) => setNewLevel(Number(e.target.value))}
+              >
+                {Object.entries(LEVEL_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+              <button
+                className={styles.add_btn}
+                onClick={handleAddSkill}
+                disabled={addingSkill || !newSkill.trim()}
+              >
+                {addingSkill ? "..." : "+ Thêm"}
+              </button>
+            </div>
+
+            {/* Skill list */}
+            <div className={styles.skill_list}>
+              {loadingSkills ? (
+                <div className={styles.skills_loading}>
+                  <div className={styles.spinner_sm} />
+                </div>
+              ) : skills.length === 0 ? (
+                <div className={styles.empty_skills}>
+                  <span>Chưa có skill nào. Thêm skill đầu tiên của bạn!</span>
+                </div>
+              ) : (
+                skills.map((sk, i) => (
+                  <div key={sk.skill_uuid ?? i} className={styles.skill_row}>
+                    <div className={styles.skill_left}>
+                      <span
+                        className={styles.level_dot}
+                        style={{ background: LEVEL_COLORS[sk.level] ?? "#94a3b8" }}
+                      />
+                      {editSkillIdx === i ? (
+                        <input
+                          className={styles.skill_edit_input}
+                          value={editSkillVal}
+                          onChange={(e) => setEditSkillVal(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              setSkills(skills.map((s, idx) => idx === i ? { ...s, name: editSkillVal } : s));
+                              setEditSkillIdx(null);
+                            }
+                            if (e.key === "Escape") setEditSkillIdx(null);
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span className={styles.skill_name}>{sk.name}</span>
+                      )}
+                    </div>
+
+                    <div className={styles.skill_right}>
+                      <span
+                        className={styles.level_badge}
+                        style={{
+                          color: LEVEL_COLORS[sk.level] ?? "#94a3b8",
+                          background: `${LEVEL_COLORS[sk.level] ?? "#94a3b8"}18`,
+                        }}
+                      >
+                        {LEVEL_LABELS[sk.level] ?? "—"}
+                      </span>
+                      {sk.years_of_experience > 0 && (
+                        <span className={styles.exp_text}>{sk.years_of_experience}yr</span>
+                      )}
+                      {sk.verified && (
+                        <span className={styles.verified_badge} title="Đã xác minh">✓</span>
+                      )}
+                      <button
+                        className={styles.del_btn}
+                        onClick={() => handleDeleteSkill(sk)}
+                        title="Xóa skill"
+                      >
+                        <svg viewBox="0 0 16 16" fill="none" width="10" height="10">
+                          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-
         </div>
 
-        {/* ──── RIGHT PANEL ──── */}
-        <div className={styles.right_panel}>
-
-          {/* ── Projects Overview ── */}
-          <div className={styles.card}>
-            <div className={styles.card_header}>
-              <span className={styles.card_title}>Dự án đã tham gia</span>
-              <button className={styles.see_all_btn}>Xem tất cả →</button>
-            </div>
-            <div className={styles.project_grid}>
-              {FAKE_PROJECTS.map((p) => (
-                <div key={p.id} className={styles.project_card} style={{ "--accent": p.color }}>
-                  <div className={styles.proj_top}>
-                    <span className={styles.proj_name}>{p.name}</span>
-                    <span
-                      className={styles.proj_status}
-                      style={{
-                        background: p.status === "active" ? "rgba(0,229,187,.1)" : p.status === "completed" ? "rgba(68,232,126,.1)" : "rgba(107,107,120,.1)",
-                        color: p.status === "active" ? "#00e5bb" : p.status === "completed" ? "#44e87e" : "#6b6b78",
-                      }}
-                    >
-                      {p.status === "active" ? "Active" : p.status === "completed" ? "Xong" : "Tạm dừng"}
-                    </span>
-                  </div>
-                  <span className={styles.proj_role}>{p.role}</span>
-                  <div className={styles.proj_progress_row}>
-                    <div className={styles.proj_track}>
-                      <div className={styles.proj_fill} style={{ width: `${p.progress}%`, background: p.color }} />
-                    </div>
-                    <span className={styles.proj_pct} style={{ color: p.color }}>{p.progress}%</span>
-                  </div>
-                  <div className={styles.proj_meta}>
-                    <span>📋 {p.taskCount} tasks</span>
-                    <span>📅 {fmtDate(p.deadline)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Tasks Panel (tab: active | history) ── */}
-          <div className={`${styles.card} ${styles.card_flex}`}>
-            <div className={styles.card_header}>
-              <div className={styles.tab_group}>
-                {/* <button
-                  className={`${styles.tab} ${historyTab === "active" ? styles.tab_active : ""}`}
-                  onClick={() => setHistoryTab("active")}
-                >
-                  Đang thực hiện
-                  <span className={styles.tab_badge}>{activeTasks.length}</span>
-                </button> */}
-                <button
-                  className={`${styles.tab} ${historyTab === "history" ? styles.tab_active : ""}`}
-                  onClick={() => setHistoryTab("history")}
-                >
-                  Lịch sử hoàn thành
-                  <span className={styles.tab_badge}>{completedTasks.length}</span>
-                </button>
-              </div>
-              <button className={styles.see_all_btn}>Xem tất cả →</button>
-            </div>
-
-            <div className={styles.task_list}>
-              {/* {historyTab === "active" && activeTasks.map((t) => (
-                <div key={t.id} className={styles.task_row}>
-                  <div className={styles.tr_left}>
-                    <span
-                      className={styles.tr_prio_dot}
-                      style={{ background: PRIORITY_MAP[t.priority]?.color }}
-                    />
-                    <div className={styles.tr_info}>
-                      <span className={styles.tr_title}>{t.title}</span>
-                      <span className={styles.tr_project}>{t.project}</span>
-                    </div>
-                  </div>
-                  <div className={styles.tr_right}>
-                    <div className={styles.tr_progress_wrap}>
-                      <div className={styles.tr_track}>
-                        <div className={styles.tr_fill} style={{ width: `${t.progress}%` }} />
-                      </div>
-                      <span className={styles.tr_pct}>{t.progress}%</span>
-                    </div>
-                    <span
-                      className={styles.tr_status}
-                      style={{ color: STATUS_MAP[t.status]?.color }}
-                    >
-                      {STATUS_MAP[t.status]?.label}
-                    </span>
-                    <span className={styles.tr_due}>⏱ {fmtDate(t.dueDate)}</span>
-                    <button className={styles.tr_btn}>Chi tiết</button>
-                  </div>
-                </div>
-              ))} */}
-
-              {historyTab === "history" && completedTasks.map((t) => (
-                <div key={t.id} className={`${styles.task_row} ${styles.task_row_done}`}>
-                  <div className={styles.tr_left}>
-                    <span className={styles.tr_done_icon}>✓</span>
-                    <div className={styles.tr_info}>
-                      <span className={styles.tr_title}>{t.title}</span>
-                      <span className={styles.tr_project}>{t.project}</span>
-                    </div>
-                  </div>
-                  <div className={styles.tr_right}>
-                    <span
-                      className={styles.tr_prio}
-                      style={{ color: PRIORITY_MAP[t.priority]?.color, background: `${PRIORITY_MAP[t.priority]?.color}18` }}
-                    >
-                      {PRIORITY_MAP[t.priority]?.label}
-                    </span>
-                    <span className={styles.tr_completed}>✓ {fmtDate(t.completedAt)}</span>
-                    <span className={styles.tr_due_faded}>Deadline: {fmtDate(t.dueDate)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
       </div>
     </div>
   );
