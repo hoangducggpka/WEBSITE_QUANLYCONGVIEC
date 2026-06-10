@@ -1,8 +1,8 @@
 #apps/security/services.py
 import redis
-
+import os
 client = redis.Redis(
-    host="127.0.0.1",
+    host=os.getenv("REDIS_HOST", "redis"),
     port=6379,
     db=2,
     decode_responses=True

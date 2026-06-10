@@ -1,0 +1,94 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: task_mysql
+    restart: always
+
+    environment:
+      MYSQL_DATABASE: taskdb
+      MYSQL_ROOT_PASSWORD: root
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    container_name: task_redis
+    restart: always
+
+  backend:
+    build: ./backend
+    container_name: task_backend
+
+    # command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+
+    volumes:
+      - ./backend:/app
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - mysql
+      - redis
+
+    env_file:
+      - .env
+
+  celery_worker:
+    build: ./backend
+    container_name: task_celery_worker
+
+    command: celery -A config worker -l info -P solo
+
+    volumes:
+      - ./backend:/app
+
+    depends_on:
+      - backend
+      - redis
+
+    env_file:
+      - .env
+
+  celery_beat:
+    build: ./backend
+    container_name: task_celery_beat
+
+    command: celery -A config beat -l info
+
+    volumes:
+      - ./backend:/app
+
+    depends_on:
+      - backend
+      - redis
+
+    env_file:
+      - .env
+
+  frontend:
+    build: ./frontend
+    container_name: task_frontend
+
+    ports:
+      - "5173:5173"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    depends_on:
+      - backend
+
+  hydra:
+    image: vanhauser/hydra
+    container_name: hydra_attack
+    tty: true
+
+volumes:
+  mysql_data:
