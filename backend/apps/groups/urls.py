@@ -1,3 +1,4 @@
+#apps/groups/urls.py
 from django.urls import path
 from .views import GroupDetailView, LeaveGroupView, MyLedGroupsView, KickMemberView, CreateGroupView, AddMemberView, MyGroupsView, GroupMembersView, SearchGroupView, DeleteGroupView
 

@@ -12,7 +12,7 @@ import uuid
 
 class Project(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
 
     group = models.ForeignKey(
         Group,
