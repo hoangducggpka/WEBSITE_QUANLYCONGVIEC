@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from celery.schedules import crontab
 
 # from celery.schedules import crontab
 
@@ -186,7 +187,20 @@ CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+# CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+
+CELERY_BEAT_SCHEDULE = {
+    "check-project-status-every-1-minute": {
+        "task": "apps.projects.tasks.check_project_status",
+        "schedule": 60.0,
+    },
+
+    "check-task-overdue-every-1-minute": {
+        "task": "apps.projects.tasks.check_task_overdue",
+        "schedule": 60.0,
+    },
+}
 
 
 
