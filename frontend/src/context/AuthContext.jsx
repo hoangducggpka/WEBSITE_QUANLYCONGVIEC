@@ -1,9 +1,9 @@
 //src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { apiFetch } from "../utils/api";
+import React from "react";
+// import ReactDOM from "react-dom/client";
 const AuthContext = createContext();
-
-const API_BASE = "http://127.0.0.1:8000/accounts";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

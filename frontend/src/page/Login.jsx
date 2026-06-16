@@ -4,31 +4,30 @@ import styles from "./Login.module.css";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { apiFetch } from "../utils/api";
+import { extractFirstError } from "../utils/api"; 
 
-
-const API_BASE = "http://127.0.0.1:8000/accounts";
+// const API_BASE = import.meta.env.VITE_API_URL ?? "";
+const API_BASE =
+    import.meta.env.VITE_API_BASE || "";
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  
   const navigate = useNavigate();
   const { login } = useAuth();
+  
 
-
-
-const [form, setForm] = useState({
-  username: "",
-  password: "",
-  fullname: "",
-  email: "",
-  address: "",
-  phone: "",
-  avatarpath: ""
-});
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    fullname: "",
+    email: "",
+    address: "",
+    phone: "",
+    avatarpath: ""
+  });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -37,9 +36,8 @@ const [form, setForm] = useState({
   const handleLogin = async () => {
     setLoading(true);
     setError("");
-
     try {
-      const res = await fetch(`${API_BASE}/login/`, {
+      const res = await fetch(`${API_BASE}/accounts/login/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -53,22 +51,15 @@ const [form, setForm] = useState({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.detail || "Login failed");
+        throw new Error(data.detail || "Đăng nhập thất bại, vui lòng thử lại!");
       }
 
-      // localStorage.setItem("access", data.access);
-      // localStorage.setItem("refresh", data.refresh);
-
-      const profile = await login(
-          data.access,
-          data.refresh
-      );
+      const profile = await login(data.access, data.refresh);
 
       if (profile?.is_staff) {
-          navigate("/security");
-      }
-      else {
-          navigate("/overview");
+        navigate("/security");
+      } else {
+        navigate("/overview");
       }
 
     } catch (err) {
@@ -79,38 +70,35 @@ const [form, setForm] = useState({
   };
 
   const handleRegister = async () => {
-    setLoading(true);
-    setError("");
+      setLoading(true);
+      setError("");
 
-    try {
-      const res = await fetch(`${API_BASE}/register/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          username: form.username,
-          password: form.password,
-          fullname: form.fullname,
-          address:form.address,
-          email: form.email,
-          phone:form.phone
-        })
-      });
+      try {
+          const res = await fetch(`${API_BASE}/register/`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  username: form.username,
+                  password: form.password,
+                  fullname: form.fullname,
+                  address: form.address,
+                  email: form.email,
+                  phone: form.phone
+              })
+          });
 
-      const data = await res.json();
+          const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error("Register failed");
+          if (!res.ok) {
+              throw new Error(extractFirstError(data));
+          }
+
+          await handleLogin();
+      } catch (err) {
+          setError(err.message);
+      } finally {
+          setLoading(false);
       }
-
-
-      await handleLogin();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmit = (e) => {
@@ -121,35 +109,17 @@ const [form, setForm] = useState({
   return (
     <div className={styles.wrapper}>
       <div className={`${styles.container} ${isRegister ? styles.active : ""}`}>
-        
+
         <div className={styles.formContainer}>
-          <h2>{isRegister ? "Register" : "Login"}</h2>
+          <h2>{isRegister ? "Đăng ký" : "Đăng nhập"}</h2>
 
           <form onSubmit={handleSubmit}>
-            {/* {isRegister && (
-              <>
-                <input
-                  type="text"
-                  name="fullname"
-                  placeholder="Full name"
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  onChange={handleChange}
-                  required
-                />
-              </>
-            )} */}
             {isRegister && (
               <>
                 <input
                   type="text"
                   name="fullname"
-                  placeholder="Full name"
+                  placeholder="Họ và tên"
                   onChange={handleChange}
                   required
                 />
@@ -165,14 +135,14 @@ const [form, setForm] = useState({
                 <input
                   type="text"
                   name="address"
-                  placeholder="Address"
+                  placeholder="Địa chỉ"
                   onChange={handleChange}
                 />
 
                 <input
                   type="text"
                   name="phone"
-                  placeholder="Phone"
+                  placeholder="Số điện thoại"
                   onChange={handleChange}
                 />
               </>
@@ -181,7 +151,7 @@ const [form, setForm] = useState({
             <input
               type="text"
               name="username"
-              placeholder="Username"
+              placeholder="Tên đăng nhập"
               onChange={handleChange}
               required
             />
@@ -189,7 +159,7 @@ const [form, setForm] = useState({
             <input
               type="password"
               name="password"
-              placeholder="Password"
+              placeholder="Mật khẩu"
               onChange={handleChange}
               required
             />
@@ -197,24 +167,24 @@ const [form, setForm] = useState({
             {error && <p className={styles.error}>{error}</p>}
 
             <button type="submit" disabled={loading}>
-              {loading ? "Processing..." : isRegister ? "Register" : "Login"}
+              {loading ? "Đang xử lý..." : isRegister ? "Đăng ký" : "Đăng nhập"}
             </button>
           </form>
 
           <p className={styles.switchText}>
-            {isRegister ? "Already have an account?" : "Don't have an account?"}
+            {isRegister ? "Đã có tài khoản?" : "Chưa có tài khoản?"}
             <span onClick={() => setIsRegister(!isRegister)}>
-              {isRegister ? " Login" : " Register"}
+              {isRegister ? " Đăng nhập" : " Đăng ký"}
             </span>
           </p>
         </div>
 
         <div className={styles.sidePanel}>
-          <h1>{isRegister ? "Welcome!" : "Hello Again!"}</h1>
+          <h1>{isRegister ? "Chào mừng!" : "Chào mừng trở lại!"}</h1>
           <p>
             {isRegister
-              ? "Create your account to access the system."
-              : "Login to continue your journey."}
+              ? "Tạo tài khoản để bắt đầu sử dụng hệ thống."
+              : "Đăng nhập để tiếp tục."}
           </p>
         </div>
 

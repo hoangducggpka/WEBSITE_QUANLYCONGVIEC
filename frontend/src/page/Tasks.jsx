@@ -1,6 +1,6 @@
 // Tasks.jsx — Real API, progress update, help request, navigate to detail
 import styles from "./Tasks.module.css";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/api";

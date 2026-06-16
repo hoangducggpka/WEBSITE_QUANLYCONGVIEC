@@ -1,11 +1,16 @@
-import {
+import React, {
   createContext,
   useContext,
   useEffect,
   useState,
 } from "react";
 
+// import ReactDOM from "react-dom/client";
 const PresenceContext = createContext();
+const WS_BASE =
+  import.meta.env.VITE_WS_BASE ||
+  "ws://127.0.0.1:8000";
+
 
 export const PresenceProvider = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState([]);
@@ -15,8 +20,9 @@ export const PresenceProvider = ({ children }) => {
 
     if (!token) return;
 
+
     const ws = new WebSocket(
-      `ws://127.0.0.1:8000/ws/presence/?token=${token}`
+      `${WS_BASE}/ws/presence/?token=${token}`
     );
 
     ws.onopen = () => {

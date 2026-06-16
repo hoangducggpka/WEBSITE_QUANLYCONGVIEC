@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from apps.notifications.notification_service import create_notification_and_broadcast
 from apps.groups.models import Group
 from apps.notifications.models import Notification
 from apps.tasks.models import Task
@@ -252,23 +252,29 @@ class DeleteProjectView(APIView):
         if projects.filter(group__leader=request.user).count() != projects.count():
             return Response({"error": "Only leader can delete projects"}, status=403)
 
-        notifications = []
+        # Build trước danh sách target, vì sau projects.delete() sẽ không query được nữa
+        targets = []
         for project in projects:
-            user_projects = UserProject.objects.filter(project=project).select_related("group_member__user")
             leader_name   = _leader_name(project.group.leader)
+            group_name    = project.group.name
+            user_projects = UserProject.objects.filter(project=project).select_related("group_member__user")
             for up in user_projects:
-                notifications.append(
-                    Notification(
-                        user    = up.group_member.user,
-                        project = None,
-                        content = f"{leader_name}||Dự án '{project.name}' đã bị xóa",
-                        priority = 3,
-                    )
-                )
+                targets.append((
+                    up.group_member.user,
+                    f"{leader_name} | {group_name} | Dự án '{project.name}' đã bị xóa",
+                ))
 
-        Notification.objects.bulk_create(notifications)
         deleted_count = projects.count()
         projects.delete()
+
+        for target_user, content in targets:
+            create_notification_and_broadcast(
+                user=target_user,
+                content=content,
+                group_name=f"user_{target_user.id}",
+                priority=3,
+            )
+
         return Response({"message": f"Đã xóa {deleted_count} dự án"}, status=200)
 
 
@@ -328,7 +334,7 @@ class UpdateProjectNameView(APIView):
 
     def patch(self, request, project_uuid):
         try:
-            project = Project.objects.get(uuid=project_uuid)
+            project = Project.objects.select_related("group").get(uuid=project_uuid)
         except Project.DoesNotExist:
             return Response({"error": "Project not found"}, status=404)
 
@@ -336,13 +342,49 @@ class UpdateProjectNameView(APIView):
             return Response({"error": "Permission denied"}, status=403)
 
         new_name = request.data.get("name")
+
         if not new_name:
-            return Response({"error": "Name is required"}, status=400)
+            return Response(
+                {"error": "Name is required"},
+                status=400
+            )
+
+        new_name = new_name.strip()
+
+        if not new_name:
+            return Response(
+                {"error": "Name is required"},
+                status=400
+            )
+
+        old_name = project.name
+
+        if old_name.lower() == new_name.lower():
+            return Response(
+                {"message": "Tên dự án không thay đổi"},
+                status=200
+            )
 
         project.name = new_name
         project.save()
-        return Response({"message": "Project name updated"}, status=200)
+        old_name     = project.name
+        project.name = new_name
+        project.save()
 
+        leader_name = _leader_name(request.user)
+        user_projects = UserProject.objects.filter(project=project).select_related("group_member__user")
+        for up in user_projects:
+            target_user = up.group_member.user
+            if target_user == request.user:
+                continue
+            create_notification_and_broadcast(
+                user=target_user,
+                content=f"{leader_name} | {project.group.name} | Dự án '{old_name}' đã được đổi tên thành '{new_name}'",
+                group_name=f"user_{target_user.id}",
+                priority=1,
+            )
+
+        return Response({"message": "Project name updated"}, status=200)
 
 class UpdateProjectDatesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -360,7 +402,7 @@ class UpdateProjectDatesView(APIView):
 
     def patch(self, request, project_uuid):
         try:
-            project = Project.objects.get(uuid=project_uuid)
+            project = Project.objects.select_related("group").get(uuid=project_uuid)
         except Project.DoesNotExist:
             return Response({"error": "Không tìm thấy dự án!"}, status=404)
 
@@ -373,21 +415,34 @@ class UpdateProjectDatesView(APIView):
         if not start_str and not end_str:
             return Response({"error": "Cần cung cấp ít nhất start_date hoặc end_date"}, status=400)
 
-        if start_str and project.computed_status == "ongoing":
+        parsed_start = self._parse(start_str) if start_str else None
+        parsed_end   = self._parse(end_str)   if end_str   else None
+
+        if start_str and not parsed_start:
+            return Response({"error": "Định dạng start_date không hợp lệ"}, status=400)
+        if end_str and not parsed_end:
+            return Response({"error": "Định dạng end_date không hợp lệ"}, status=400)
+
+        start_changed = bool(parsed_start) and parsed_start != project.start_date
+
+        if start_changed and project.computed_status == "ongoing":
             return Response({"error": "Không thể thay đổi start_date khi dự án đang diễn ra!"}, status=400)
 
-        start_date = self._parse(start_str) or project.start_date
-        end_date   = self._parse(end_str)   or project.end_date
-
-        if not self._parse(start_str) and start_str:
-            return Response({"error": "Định dạng start_date không hợp lệ"}, status=400)
-        if not self._parse(end_str) and end_str:
-            return Response({"error": "Định dạng end_date không hợp lệ"}, status=400)
+        start_date = parsed_start or project.start_date
+        end_date   = parsed_end   or project.end_date
+        if (
+            start_date == project.start_date and
+            end_date == project.end_date
+        ):
+            return Response(
+                {"message": "Không có thay đổi nào về thời gian dự án"},
+                status=200
+            )
 
         if end_str and end_date <= project.end_date:
             return Response({"error": "Thời gian kết thúc mới phải lớn hơn thời gian kết thúc cũ!"}, status=400)
 
-        if start_str and Task.objects.filter(project=project, start_date__lt=start_date).exists():
+        if start_changed and Task.objects.filter(project=project, start_date__lt=start_date).exists():
             return Response({"error": "Có công việc bắt đầu trước thời gian bắt đầu mới!"}, status=400)
 
         project.start_date = start_date
@@ -400,13 +455,18 @@ class UpdateProjectDatesView(APIView):
 
         project.save()
 
-        leader_name = _leader_name(request.user)
-        Notification.objects.create(
-            content    = f"{leader_name} |  | {leader_name} đã thay đổi thời gian dự án '{project.name}'",
-            priority   = 2,
-            project    = project,
-            is_private = False,
-        )
+        leader_name   = _leader_name(request.user)
+        user_projects = UserProject.objects.filter(project=project).select_related("group_member__user")
+        for up in user_projects:
+            target_user = up.group_member.user
+            if target_user == request.user:
+                continue
+            create_notification_and_broadcast(
+                user=target_user,
+                content=f"{leader_name} | {project.group.name} | {leader_name} đã thay đổi thời gian dự án '{project.name}'",
+                group_name=f"user_{target_user.id}",
+                priority=2,
+            )
 
         return Response({"message": "Thời gian dự án đã được update!"}, status=200)
 
@@ -438,14 +498,14 @@ class AddProjectMemberView(APIView):
             group_member = serializer.validated_data["group_member"],
         )
 
-        # Notify new member
         added_user  = serializer.validated_data["group_member"].user
         leader_name = _leader_name(request.user)
-        Notification.objects.create(
-            user    = added_user,
-            content = f"{leader_name} | {project.group.name} | Bạn đã được thêm vào dự án '{project.name}'",
-            project = project,
-            priority = 2,
+
+        create_notification_and_broadcast(
+            user=added_user,
+            content=f"{leader_name} | {project.group.name} | Bạn đã được thêm vào dự án '{project.name}'",
+            group_name=f"user_{added_user.id}",
+            priority=2,
         )
 
         return Response(
@@ -475,20 +535,59 @@ class KickProjectMemberView(APIView):
         if kicked_user == leader:
             return Response({"error": "Bạn không thể tự kick bạn!"}, status=400)
 
-        # Delete all tasks assigned to this user in the project
         Task.objects.filter(project=project, assigned_to=up).delete()
 
         leader_name = _leader_name(leader)
-        Notification.objects.create(
-            user    = kicked_user,
-            content = f'{leader_name}|{project.group.name}| {leader_name} đã xóa bạn ra khỏi dự án "{project.name}"',
-            project = project,
-            priority = 4,
-        )
 
         up.delete()
 
-        # Update progress after member tasks removed
+        create_notification_and_broadcast(
+            user=kicked_user,
+            content=f"{leader_name} | {project.group.name} | {leader_name} đã xóa bạn ra khỏi dự án '{project.name}'",
+            group_name=f"user_{kicked_user.id}",
+            priority=4,
+        )
+
+        progress = update_project_progress(project)
+        broadcast_project_progress(project.uuid, progress)
+
+        return Response({"message": "Đã xóa thành viên ra khỏi dự án!"}, status=200)
+
+
+class KickProjectMemberView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, userproject_uuid):
+        try:
+            up = UserProject.objects.select_related(
+                "project__group", "group_member__user"
+            ).get(uuid=userproject_uuid)
+        except UserProject.DoesNotExist:
+            return Response({"error": "UserProject not found"}, status=404)
+
+        project     = up.project
+        leader      = project.group.leader
+        kicked_user = up.group_member.user
+
+        if leader != request.user:
+            return Response({"error": "Chỉ leader mới có thể kick thành viên!"}, status=403)
+
+        if kicked_user == leader:
+            return Response({"error": "Bạn không thể tự kick bạn!"}, status=400)
+
+        Task.objects.filter(project=project, assigned_to=up).delete()
+
+        leader_name = _leader_name(leader)
+
+        up.delete()
+
+        create_notification_and_broadcast(
+            user=kicked_user,
+            content=f"{leader_name} | {project.group.name} | {leader_name} đã xóa bạn ra khỏi dự án '{project.name}'",
+            group_name=f"user_{kicked_user.id}",
+            priority=4,
+        )
+
         progress = update_project_progress(project)
         broadcast_project_progress(project.uuid, progress)
 

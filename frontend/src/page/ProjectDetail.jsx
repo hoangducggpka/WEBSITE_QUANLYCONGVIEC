@@ -3,11 +3,15 @@ import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "./ProjectDetail.module.css";
 import { apiFetch } from "../utils/api";
+import React from "react";
 
 // ─── Config ────────────────────────────────────────────────────────────────
-const WS_BASE = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
+const WS_BASE =
+    import.meta.env.VITE_WS_BASE ||
+    "ws://localhost:8000";
 // ─── Helpers ──────────────────────────────────────────────────────────────
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
+const API_BASE =
+    import.meta.env.VITE_API_BASE || "";
 
 /** Đảm bảo avatar URL có host đầy đủ (fix WS trả về relative path) */
 function resolveAvatar(path) {
@@ -203,7 +207,8 @@ function Toast({ message, show, type = "default" }) {
     const bg = type === "error" ? "#ef4444" : undefined;
     return (
         <div className={`${styles.toast} ${show ? styles.toastShow : ""}`} style={bg ? { background: bg } : {}}>
-            <Icon.Check />{message}
+            {type === "error" ? <Icon.Close /> : <Icon.Check />}
+            {message}
         </div>
     );
 }

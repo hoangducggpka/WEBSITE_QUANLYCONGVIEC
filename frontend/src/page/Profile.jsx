@@ -1,11 +1,11 @@
 import styles from "./Profile2.module.css";
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { apiFetch } from "../utils/api";
+import { API_BASE } from "../config/env";
 // ──────────────────────────────────────────────
 // CONSTANTS
 // ──────────────────────────────────────────────
 const CROP_SIZE = 260;
-const API_BASE = "http://127.0.0.1:8000";
 
 // ──────────────────────────────────────────────
 // HELPERS

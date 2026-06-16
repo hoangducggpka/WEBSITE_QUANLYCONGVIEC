@@ -16,6 +16,14 @@ from django.contrib.auth import authenticate
 
 RESET_CODES = {}
 
+# apps/accounts/views.py
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import ViTokenObtainPairSerializer
+
+
+class ViTokenObtainPairView(TokenObtainPairView):
+    serializer_class = ViTokenObtainPairSerializer
+
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 

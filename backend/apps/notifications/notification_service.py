@@ -21,6 +21,7 @@ def create_notification_and_broadcast(user, content, group_name,priority=1, extr
                 "id": notification.id,
                 "content": notification.content,
                 "priority": notification.priority,
+                "created_at": notification.created_at.isoformat(),
                 "extra": extra or {}
             }
         }

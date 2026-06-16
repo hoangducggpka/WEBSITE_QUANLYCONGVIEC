@@ -110,8 +110,8 @@ class AddMemberView(APIView):
 
         if serializer.is_valid():
             member = serializer.save()
-            user = member.user  # ✅ Lấy trực tiếp từ object vừa tạo, không query lại
-            
+            user = member.user
+
             leader_name = request.user.profile.fullname
             group_name  = group.name
             content = (
@@ -126,7 +126,47 @@ class AddMemberView(APIView):
             )
             return Response({"message": "Member added"}, status=201)
 
-                # return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=400)
+
+# class AddMemberView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, group_uuid):
+#         try:
+#             group = Group.objects.get(uuid=group_uuid)
+#         except Group.DoesNotExist:
+#             return Response({"error": "Group not found"}, status=404)
+
+#         if group.leader != request.user:
+#             return Response(
+#                 {"error": "Chỉ Leader mới có thể thêm thành viên!"},
+#                 status=403
+#             )
+
+#         serializer = AddMemberSerializer(
+#             data=request.data,
+#             context={"group": group}
+#         )
+
+#         if serializer.is_valid():
+#             member = serializer.save()
+#             user = member.user  # ✅ Lấy trực tiếp từ object vừa tạo, không query lại
+            
+#             leader_name = request.user.profile.fullname
+#             group_name  = group.name
+#             content = (
+#                 f"{leader_name} | {group_name} | "
+#                 f"{leader_name} đã thêm bạn vào nhóm '{group_name}'"
+#             )
+#             create_notification_and_broadcast(
+#                 user=user,
+#                 content=content,
+#                 group_name=f"user_{user.id}",
+#                 priority=2,
+#             )
+#             return Response({"message": "Member added"}, status=201)
+
+#                 # return Response(serializer.errors, status=400)
 
 
 class LeaveGroupView(APIView):

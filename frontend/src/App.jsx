@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import React from "react";
 import ProtectedRoute from "./component/ProtectedRoute";
 import MainLayout from "./MainLayout";
 import Login from "./page/Login";
@@ -8,6 +9,7 @@ function App() {
     const { loading } = useAuth();
 
     if (loading) return null;
+    
 
     return (
         <Routes>

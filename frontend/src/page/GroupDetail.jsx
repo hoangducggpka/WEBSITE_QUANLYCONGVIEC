@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CiLogout } from "react-icons/ci";
 import { apiFetch } from "../utils/api";
-
+import React from "react";
 import {
   MdOutlinePersonAdd,
   MdOutlineDelete,
@@ -380,26 +380,41 @@ function GroupDetail() {
   }
   // ── Thêm thành viên ──
   const handleAddMember = async () => {
-    try {
-      const res = await apiFetch(`/groups/${uuid}/add_member/`, {
-        method: "POST",
-        body: JSON.stringify({ username }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("[GroupDetail] Add member error:", data);
-        return;
+      try {
+          await apiFetch(`/groups/${uuid}/add_member/`, {
+              method: "POST",
+              body: JSON.stringify({ username }),
+          });
+          setModal(null);
+          setUsername("");
+          loadGroup();
+      } catch (err) {
+          console.error("[GroupDetail] Add member error:", err.message);
+          // nếu có setError ở component này thì show ra UI luôn, ví dụ:
+          // setError(err.message);
       }
-
-      setModal(null);
-      setUsername("");
-      loadGroup();
-    } catch (err) {
-      console.error("[GroupDetail] Add member fetch error:", err);
-    }
   };
+  // const handleAddMember = async () => {
+  //   try {
+  //     const res = await apiFetch(`/groups/${uuid}/add_member/`, {
+  //       method: "POST",
+  //       body: JSON.stringify({ username }),
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (!res.ok) {
+  //       console.error("[GroupDetail] Add member error:", data);
+  //       return;
+  //     }
+
+  //     setModal(null);
+  //     setUsername("");
+  //     loadGroup();
+  //   } catch (err) {
+  //     console.error("[GroupDetail] Add member fetch error:", err);
+  //   }
+  // };
 
   // ── Kick 1 thành viên ──
   const kickMember = async (userId) => {

@@ -1,5 +1,5 @@
 import styles from "./NavBar.module.css";
-
+import React from "react";
 import { LuBell } from "react-icons/lu";
 import { RiMessageFill } from "react-icons/ri";
 import { RiCloseCircleFill } from "react-icons/ri";
@@ -7,15 +7,17 @@ import { RiDeleteBin6Line } from "react-icons/ri";
 import { FaCaretDown } from "react-icons/fa";
 import { BsCheckAll } from "react-icons/bs";
 import { MdCircleNotifications } from "react-icons/md";
-
+import {
+  API_BASE,
+  WS_BASE,
+  MEDIA_URL
+} from "../config/env";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../utils/api";
 
-const API_BASE  = "http://127.0.0.1:8000";
-const WS_BASE   = "ws://localhost:8000";
-const MEDIA_URL = "http://127.0.0.1:8000";
+
 
 const PRIORITY_MAP = {
     1: { label: "Thấp", color: "#6b7280" },

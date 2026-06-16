@@ -5,7 +5,7 @@ from __future__ import annotations
 import os, json
 import google.generativeai as genai
 from django.conf import settings
-
+from apps.notifications.notification_service import create_notification_and_broadcast
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -306,22 +306,19 @@ class BulkCreateTaskView(APIView):
 
         creator_name = _leader_name(request.user)
         group_name   = project.group.name
-        notifications = []
+        project_name = project.name
 
+        # ── Gửi notification realtime cho từng member được assign ──────
         for task in tasks:
             if task.assigned_to:
-                notifications.append(
-                    Notification(
-                        user    = task.assigned_to.group_member.user,
-                        content = f"{creator_name} | {group_name} | {creator_name} đã giao một công việc cho bạn: '{task.name}'",
-                        priority = 1,
-                        project = project,
-                    )
+                target_user = task.assigned_to.group_member.user
+                create_notification_and_broadcast(
+                    user=target_user,
+                    content=f"{creator_name} ({group_name}) đã giao một công việc cho bạn: '{task.name}'",
+                    group_name=f"user_{target_user.id}",
+                    priority=1,
+                    extra={"task_uuid": str(task.uuid), "project_uuid": str(project.uuid)},
                 )
-                
-
-        if notifications:
-            Notification.objects.bulk_create(notifications)
 
         # Broadcast updated project progress via WS
         progress = update_project_progress(project)
@@ -331,6 +328,61 @@ class BulkCreateTaskView(APIView):
             {"created": len(tasks), "task_uuids": [str(t.uuid) for t in tasks]},
             status=201,
         )
+
+# class BulkCreateTaskView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, project_uuid):
+#         try:
+#             project = Project.objects.select_related("group").get(uuid=project_uuid)
+#         except Project.DoesNotExist:
+#             return Response({"error": "Không tìm thấy dự án"}, status=404)
+
+#         if project.computed_status == "finished":
+#             return Response({"error": "Dự án đã kết thúc, bạn không thể tạo thêm task"}, status=400)
+
+#         if project.group.leader != request.user:
+#             return Response({"error": "Chỉ có Trưởng nhóm mới có thể tạo task"}, status=403)
+
+#         current_count  = project.tasks.count()
+#         incoming_count = len(request.data.get("tasks", []))
+#         if current_count + incoming_count > 50:
+#             return Response(
+#                 {"error": f"Project chỉ được tối đa 50 tasks. Hiện tại đã có {current_count}"},
+#                 status=400,
+#             )
+
+#         serializer = BulkTaskCreateSerializer(data=request.data, context={"project": project})
+#         serializer.is_valid(raise_exception=True)
+#         tasks = serializer.save()
+
+#         creator_name = _leader_name(request.user)
+#         group_name   = project.group.name
+#         notifications = []
+
+#         for task in tasks:
+#             if task.assigned_to:
+#                 notifications.append(
+#                     Notification(
+#                         user    = task.assigned_to.group_member.user,
+#                         content = f"{creator_name} ({group_name}) đã giao một công việc cho bạn: '{task.name}'",
+#                         priority = 1,
+#                         project = project,
+#                     )
+#                 )
+                
+
+#         if notifications:
+#             Notification.objects.bulk_create(notifications)
+
+#         # Broadcast updated project progress via WS
+#         progress = update_project_progress(project)
+#         broadcast_project_progress(project.uuid, progress)
+
+#         return Response(
+#             {"created": len(tasks), "task_uuids": [str(t.uuid) for t in tasks]},
+#             status=201,
+#         )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -359,23 +411,26 @@ class DeleteTaskView(APIView):
         if project.computed_status == "finished":
             return Response({"error": "Dự án đã kết thúc, bạn không thể xóa công việc!"}, status=403)
 
-        notifications = []
-        for task in tasks:
-            if task.assigned_to:
-                notifications.append(
-                    Notification(
-                        user    = task.assigned_to.group_member.user,
-                        content = f"{project.name} | | Công việc '{task.name}' của bạn đã bị xóa!",
-                        project = project,
-                        priority = 3,
-                    )
-                )
+        leader_name = _leader_name(request.user)
+        group_name  = project.group.name
+
+        # Lưu trước danh sách (task, user) cần báo, vì sau khi tasks.delete() sẽ không truy cập được nữa
+        targets = [
+            (task.name, task.assigned_to.group_member.user)
+            for task in tasks
+            if task.assigned_to
+        ]
 
         deleted_count = tasks.count()
         tasks.delete()
 
-        if notifications:
-            Notification.objects.bulk_create(notifications)
+        for task_name, target_user in targets:
+            create_notification_and_broadcast(
+                user=target_user,
+                content=f"{leader_name} | {group_name} | Công việc '{task_name}' của bạn đã bị xóa!",
+                group_name=f"user_{target_user.id}",
+                priority=3,
+            )
 
         progress = update_project_progress(project)
         broadcast_project_progress(project.uuid, progress)
@@ -386,7 +441,6 @@ class DeleteTaskView(APIView):
 # ─────────────────────────────────────────────────────────────────────────────
 # Update task meta (name / dates) — leader only
 # ─────────────────────────────────────────────────────────────────────────────
-
 class UpdateTaskView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -417,19 +471,109 @@ class UpdateTaskView(APIView):
         if end_date_str and not end_date:
             return Response({"error": "Định dạng ngày kết thúc không hợp lệ"}, status=400)
 
-        if start_date:
-            if task.end_date and start_date >= task.end_date:
-                return Response({"error": "Ngày bắt đầu mới không thể >= ngày kết thúc"}, status=400)
-            task.start_date = start_date
+        project = task.project
 
+        # ── Validate start_date mới ─────────────────────────────────────
+        if start_date:
+            # Không được lùi start_date sớm hơn start_date hiện tại của task
+            if task.start_date and start_date < task.start_date:
+                return Response(
+                    {"error": "Ngày bắt đầu mới không thể sớm hơn ngày bắt đầu hiện tại của task"},
+                    status=400,
+                )
+            # Phải nằm trong khoảng thời gian của project
+            if project.start_date and start_date < project.start_date:
+                return Response(
+                    {"error": "Ngày bắt đầu của task phải sau ngày bắt đầu của dự án"},
+                    status=400,
+                )
+            if project.end_date and start_date > project.end_date:
+                return Response(
+                    {"error": "Ngày bắt đầu của task phải trước ngày kết thúc của dự án"},
+                    status=400,
+                )
+            # So với end_date hiện tại (nếu end_date không được update cùng lúc)
+            effective_end = end_date or task.end_date
+            if effective_end and start_date >= effective_end:
+                return Response({"error": "Ngày bắt đầu mới không thể >= ngày kết thúc"}, status=400)
+
+        # ── Validate end_date mới ───────────────────────────────────────
         if end_date:
-            if task.start_date and end_date <= task.start_date:
+            # Không được rút ngắn end_date sớm hơn end_date hiện tại của task
+            if task.end_date and end_date < task.end_date:
+                return Response(
+                    {"error": "Ngày kết thúc mới không thể sớm hơn ngày kết thúc hiện tại của task"},
+                    status=400,
+                )
+            # Phải nằm trong khoảng thời gian của project
+            if project.end_date and end_date > project.end_date:
+                return Response(
+                    {"error": "Ngày kết thúc của task phải trước ngày kết thúc của dự án"},
+                    status=400,
+                )
+            if project.start_date and end_date < project.start_date:
+                return Response(
+                    {"error": "Ngày kết thúc của task phải sau ngày bắt đầu của dự án"},
+                    status=400,
+                )
+            # So với start_date hiện tại (nếu start_date không được update cùng lúc)
+            effective_start = start_date or task.start_date
+            if effective_start and end_date <= effective_start:
                 return Response({"error": "Ngày kết thúc mới phải > ngày bắt đầu"}, status=400)
+
+        if start_date:
+            task.start_date = start_date
+        if end_date:
             task.end_date = end_date
 
         task.save()
 
         return Response({"message": "Task đã được cập nhật"}, status=200)
+
+
+# class UpdateTaskView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def patch(self, request, task_uuid):
+#         try:
+#             task = Task.objects.select_related("project__group").get(uuid=task_uuid)
+#         except Task.DoesNotExist:
+#             return Response({"error": "Task không tồn tại"}, status=404)
+
+#         if task.project.group.leader != request.user:
+#             return Response({"error": "Chỉ Leader mới có quyền cập nhật task"}, status=403)
+
+#         new_name       = request.data.get("name")
+#         start_date_str = request.data.get("start_date")
+#         end_date_str   = request.data.get("end_date")
+
+#         if not any([new_name, start_date_str, end_date_str]):
+#             return Response({"error": "Phải cung cấp ít nhất 1 trường để update"}, status=400)
+
+#         if new_name:
+#             task.name = new_name
+
+#         start_date = parse_datetime(start_date_str) if start_date_str else None
+#         end_date   = parse_datetime(end_date_str)   if end_date_str   else None
+
+#         if start_date_str and not start_date:
+#             return Response({"error": "Định dạng ngày bắt đầu không hợp lệ"}, status=400)
+#         if end_date_str and not end_date:
+#             return Response({"error": "Định dạng ngày kết thúc không hợp lệ"}, status=400)
+
+#         if start_date:
+#             if task.end_date and start_date >= task.end_date:
+#                 return Response({"error": "Ngày bắt đầu mới không thể >= ngày kết thúc"}, status=400)
+#             task.start_date = start_date
+
+#         if end_date:
+#             if task.start_date and end_date <= task.start_date:
+#                 return Response({"error": "Ngày kết thúc mới phải > ngày bắt đầu"}, status=400)
+#             task.end_date = end_date
+
+#         task.save()
+
+#         return Response({"message": "Task đã được cập nhật"}, status=200)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -450,26 +594,18 @@ class UpdateTaskProgressView(APIView):
             ).get(uuid=task_uuid)
 
         except Task.DoesNotExist:
-            return Response(
-                {"detail": "Task không tồn tại"},
-                status=404
-            )
+            return Response({"detail": "Task không tồn tại"}, status=404)
 
-        # Permission
         if (
             not task.assigned_to
             or task.assigned_to.group_member.user != request.user
         ):
-            return Response(
-                {"detail": "Bạn không được assigned task này"},
-                status=403
-            )
+            return Response({"detail": "Bạn không được assigned task này"}, status=403)
 
         serializer = UpdateTaskProgressSerializer(
             data=request.data,
             context={"task": task},
         )
-
         serializer.is_valid(raise_exception=True)
 
         old_progress = task.progress
@@ -478,7 +614,6 @@ class UpdateTaskProgressView(APIView):
         task.progress = new_progress
         task.save()
 
-        # Activity
         TaskActivityService.create_activity(
             task=task,
             user=request.user,
@@ -487,38 +622,24 @@ class UpdateTaskProgressView(APIView):
             new_value=str(task.progress),
         )
 
-        # Notify review
+        # Notify leader khi member nộp bài chờ duyệt
         if new_progress == 100 and old_progress < 100:
-
-            leader = task.project.group.leader
+            leader      = task.project.group.leader
             member_name = _leader_name(request.user)
 
-            Notification.objects.create(
+            create_notification_and_broadcast(
                 user=leader,
                 content=(
-                    f"{member_name} | "
-                    f"{task.project.group.name} | "
-                    f"{member_name} đã hoàn thành "
-                    f"công việc '{task.name}', đang chờ duyệt"
+                    f"{member_name} | {task.project.group.name} | "
+                    f"{member_name} đã hoàn thành công việc '{task.name}', đang chờ duyệt"
                 ),
-                project=task.project,
+                group_name=f"user_{leader.id}",
                 priority=2,
             )
 
-        # WS task
-        broadcast_task_progress(
-            task.uuid,
-            task.progress,
-            task.computed_status
-        )
-
-        # WS project
+        broadcast_task_progress(task.uuid, task.progress, task.computed_status)
         progress = update_project_progress(task.project)
-
-        broadcast_project_progress(
-            task.project.uuid,
-            progress
-        )
+        broadcast_project_progress(task.project.uuid, progress)
 
         return Response({
             "message": (
@@ -526,14 +647,12 @@ class UpdateTaskProgressView(APIView):
                 if new_progress == 100
                 else "Tiến độ đã được cập nhật"
             ),
-
             "task_uuid": str(task.uuid),
             "progress": task.progress,
             "status": task.computed_status,
             "is_approved": task.is_approved,
             "project_progress": progress,
         })
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Approve task — leader action
@@ -563,28 +682,26 @@ class ApproveTaskView(APIView):
         task.is_approved = approved
 
         if not approved:
-            # Leader rejects → reset progress, let member redo
-            task.progress   = 0
+            task.progress    = 0
             task.is_approved = False
 
         task.save()
 
-        # Notify assigned member
         if task.assigned_to:
             member_user = task.assigned_to.group_member.user
             leader_name = _leader_name(request.user)
             if approved:
-                msg = f"{leader_name} | {task.project.group.name} | Task '{task.name}' của bạn đã được duyệt ✓"
+                msg      = f"{leader_name} | {task.project.group.name} | Task '{task.name}' của bạn đã được duyệt ✓"
                 priority = 2
             else:
-                msg = f"{leader_name} | {task.project.group.name} | Task '{task.name}' bị từ chối, vui lòng làm lại"
+                msg      = f"{leader_name} | {task.project.group.name} | Task '{task.name}' bị từ chối, vui lòng làm lại"
                 priority = 3
 
-            Notification.objects.create(
-                user    = member_user,
-                content = msg,
-                project = task.project,
-                priority = priority,
+            create_notification_and_broadcast(
+                user=member_user,
+                content=msg,
+                group_name=f"user_{member_user.id}",
+                priority=priority,
             )
 
         TaskActivity.objects.create(
@@ -595,7 +712,6 @@ class ApproveTaskView(APIView):
             new_value = "approved" if approved else "rejected",
         )
 
-        # Broadcast
         broadcast_task_progress(task.uuid, task.progress, task.computed_status)
         progress = update_project_progress(task.project)
         broadcast_project_progress(task.project.uuid, progress)
@@ -607,7 +723,6 @@ class ApproveTaskView(APIView):
             "status"           : task.computed_status,
             "project_progress" : progress,
         }, status=200)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Remind task (leader sends notification to assigned member)
@@ -638,12 +753,13 @@ class RemindTaskView(APIView):
             f"Nhắc nhở: '{task.name}' – {custom_msg or 'Hãy cập nhật tiến độ công việc!'}"
         )
 
-        Notification.objects.create(
-            user    = member_user,
-            content = content,
-            project = task.project,
-            priority = 2,
+        create_notification_and_broadcast(
+            user=member_user,
+            content=content,
+            group_name=f"user_{member_user.id}",
+            priority=2,
         )
+
         task.is_warned = True
         task.save(update_fields=["is_warned"])
 

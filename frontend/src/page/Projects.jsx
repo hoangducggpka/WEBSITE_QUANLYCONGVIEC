@@ -1,6 +1,6 @@
 import styles from "./Projects2.module.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LuChevronsUpDown } from "react-icons/lu";
 import { FaAnglesRight, FaAnglesLeft } from "react-icons/fa6";

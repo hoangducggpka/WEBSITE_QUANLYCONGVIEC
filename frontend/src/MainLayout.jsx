@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import NavBar from "./component/NavBar"
 import Profile from "./page/Profile";
 import styles from './MainLayout.module.css';
+import React from "react";
 
 import Overview from "./page/Overview";
 import Projects from "./page/Projects";

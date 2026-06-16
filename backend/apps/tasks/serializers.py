@@ -96,17 +96,17 @@ class TaskItemSerializer(serializers.Serializer):
         end   = data.get("end_date")
 
         if start and end and start >= end:
-            raise serializers.ValidationError("end_date must be greater than start_date")
+            raise serializers.ValidationError("Ngày kết thúc phải lớn hơn Ngày bắt đầu!")
         if project.start_date and start < project.start_date:
-            raise serializers.ValidationError("Task start_date must be after project start_date")
+            raise serializers.ValidationError("Ngày bắt đầu của công việc phải sau Ngày bắt đầu của dự án!")
         if project.end_date and end > project.end_date:
-            raise serializers.ValidationError("Task end_date must be before project end_date")
+            raise serializers.ValidationError("Ngày kết thúc của công việc phải trước ngày kết thúc của dự án!")
 
         if assigned_uuid:
             try:
                 up = UserProject.objects.get(uuid=assigned_uuid, project=project)
             except UserProject.DoesNotExist:
-                raise serializers.ValidationError("User is not a member of this project")
+                raise serializers.ValidationError("Người dùng không phải thành viên của dự án!")
             data["assigned_to"] = up
 
         return data

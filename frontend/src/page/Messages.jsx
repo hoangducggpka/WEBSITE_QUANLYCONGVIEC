@@ -1,6 +1,6 @@
 import styles from "./Messages.module.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
     RiSearch2Line, RiMessage3Fill, RiGroupFill, RiUser3Fill,
     RiAttachment2, RiImage2Fill, RiSendPlaneFill, RiMore2Fill,
@@ -11,9 +11,10 @@ import {
     RiCheckLine, RiCloseFill,
 } from "react-icons/ri";
 import { apiFetch } from "../utils/api";
-
-const API_BASE = "http://127.0.0.1:8000";
-const WS_BASE  = import.meta.env.VITE_WS_URL  ?? "ws://127.0.0.1:8000";
+import { API_BASE } from "../config/env";
+const WS_BASE =
+    import.meta.env.VITE_WS_BASE ||
+    "ws://localhost:8000";
 
 const toAbsUrl = (url) => {
     if (!url) return null;

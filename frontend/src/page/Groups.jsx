@@ -11,6 +11,7 @@ import {
   LiaSortAmountDownAltSolid,
   LiaSortAmountUpSolid,
 } from "react-icons/lia";
+import React from "react";
 import {
   MdOutlineFolder,
   MdOutlinePeople,
@@ -23,7 +24,9 @@ import {
 // ─────────────────────────────────────────────────────────────
 // API CONFIG
 // ─────────────────────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+// const API_BASE = import.meta.env.VITE_API_URL ?? "";
+const API_BASE =
+    import.meta.env.VITE_API_BASE || "";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",
@@ -241,31 +244,48 @@ function AddMemberModal({ group, onClose, onSuccess }) {
   const [error,    setError]    = useState("");
 
   const submit = async () => {
-    if (!username.trim()) { setError("Vui lòng nhập username"); return; }
-    setLoading(true);
-    setError("");
-    try {
-      const res  = await apiFetch(
-        `/groups/${group.uuid}/add_member/`,
-        {
-          method:  "POST",
-          headers:{},
-          body:    JSON.stringify({ username: username.trim() }),
-        }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        onSuccess();
-        onClose();
-      } else {
-        setError(data?.error || "Có lỗi xảy ra");
+      if (!username.trim()) { setError("Vui lòng nhập username"); return; }
+      setLoading(true);
+      setError("");
+      try {
+          await apiFetch(`/groups/${group.uuid}/add_member/`, {
+              method: "POST",
+              body:   JSON.stringify({ username: username.trim() }),
+          });
+          onSuccess();
+          onClose();
+      } catch (e) {
+          setError(e.message || "Có lỗi xảy ra");
+      } finally {
+          setLoading(false);
       }
-    } catch {
-      setError("Có lỗi xảy ra! Vui lòng kiển tra lại.");
-    } finally {
-      setLoading(false);
-    }
   };
+  // const submit = async () => {
+  //   if (!username.trim()) { setError("Vui lòng nhập username"); return; }
+  //   setLoading(true);
+  //   setError("");
+  //   try {
+  //     const res  = await apiFetch(
+  //       `/groups/${group.uuid}/add_member/`,
+  //       {
+  //         method:  "POST",
+  //         headers:{},
+  //         body:    JSON.stringify({ username: username.trim() }),
+  //       }
+  //     );
+  //     const data = await res.json();
+  //     if (res.ok) {
+  //       onSuccess();
+  //       onClose();
+  //     } else {
+  //       setError(data?.error || "Có lỗi xảy ra");
+  //     }
+  //   } catch {
+  //     setError("Có lỗi xảy ra! Vui lòng kiển tra lại.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <div className={styles.modal_overlay} onClick={onClose}>

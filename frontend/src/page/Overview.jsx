@@ -1,16 +1,17 @@
 // Overview.jsx — activity fetch từ /projects/activity/ riêng
 import styles from "./Overview.module.css";
-
+import React from "react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-
+import {
+  WS_BASE
+} from "../config/env";
 import { TbFolderCheck, TbFolderBolt, TbFolderPlus } from "react-icons/tb";
 import { TfiLayoutGrid3Alt } from "react-icons/tfi";
 import { FaArrowTrendUp, FaChevronRight } from "react-icons/fa6";
 
 import { apiFetch } from "../utils/api";
 import { useNavigate } from "react-router-dom";
-
 function Overview() {
 
   const [overviewData, setOverviewData]   = useState(null);
@@ -67,7 +68,7 @@ function Overview() {
   useEffect(() => {
     const token  = localStorage.getItem("access");
     const socket = new WebSocket(
-      `ws://127.0.0.1:8000/ws/tasks/activity/?token=${token}`
+      `${WS_BASE}/ws/tasks/activity/?token=${token}`
     );
 
     socket.onopen = () => {

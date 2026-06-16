@@ -4,15 +4,39 @@ from rest_framework import serializers
 from .models import UserProfile
 import uuid
 
-class AvatarUpdateSerializer(serializers.ModelSerializer):
-    avatarpath = serializers.ImageField(required=True)
-    class Meta:
-        model = UserProfile
-        fields = ["avatarpath"]
+# apps/accounts/serializers.py (hoặc file serializers tương ứng)
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
+
+from rest_framework.validators import UniqueValidator
+
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
-    fullname = serializers.CharField(write_only=True, required=True)
+    username = serializers.CharField(
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message="Tên đăng nhập đã được sử dụng!"
+            )
+        ]
+    )
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message="Email này đã được sử dụng!"
+            )
+        ]
+    )
+    password = serializers.CharField(write_only=True, min_length=6, error_messages={
+        "min_length": "Mật khẩu phải có ít nhất 6 ký tự!"
+    })
+    fullname = serializers.CharField(write_only=True, required=True, error_messages={
+        "required": "Vui lòng nhập họ và tên!",
+        "blank": "Họ và tên không được để trống!"
+    })
     address = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     phone = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
 
@@ -22,8 +46,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         fullname = validated_data.pop('fullname')
-        address = validated_data.pop('address', None)
-        phone = validated_data.pop('phone', None)
+        address  = validated_data.pop('address', None)
+        phone    = validated_data.pop('phone', None)
 
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -39,6 +63,48 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+
+class ViTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {
+        "no_active_account": "Tên tài khoản hoặc mật khẩu không đúng!"
+    }
+
+class AvatarUpdateSerializer(serializers.ModelSerializer):
+    avatarpath = serializers.ImageField(required=True)
+    class Meta:
+        model = UserProfile
+        fields = ["avatarpath"]
+
+# class RegisterSerializer(serializers.ModelSerializer):
+#     password = serializers.CharField(write_only=True, min_length=6)
+#     fullname = serializers.CharField(write_only=True, required=True)
+#     address = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+#     phone = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+
+#     class Meta:
+#         model = User
+#         fields = ['username', 'email', 'password', 'fullname', 'phone', 'address']
+
+#     def create(self, validated_data):
+#         fullname = validated_data.pop('fullname')
+#         address = validated_data.pop('address', None)
+#         phone = validated_data.pop('phone', None)
+
+#         user = User.objects.create_user(
+#             username=validated_data['username'],
+#             email=validated_data.get('email', ''),
+#             password=validated_data['password']
+#         )
+
+#         UserProfile.objects.create(
+#             user=user,
+#             fullname=fullname,
+#             address=address,
+#             phone=phone,
+#         )
+
+#         return user
     
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
