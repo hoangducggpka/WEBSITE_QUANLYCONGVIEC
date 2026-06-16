@@ -36,7 +36,7 @@ const Login = () => {
   const handleLogin = async () => {
     setLoading(true);
     setError("");
-    alert(import.meta.env.VITE_API_BASE)
+    // alert(import.meta.env.VITE_API_BASE)
     try {
       const res = await fetch(`${API_BASE}/accounts/login/`, {
         method: "POST",

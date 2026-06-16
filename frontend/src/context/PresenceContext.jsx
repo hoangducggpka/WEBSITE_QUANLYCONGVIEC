@@ -6,10 +6,10 @@ import React, {
 } from "react";
 
 // import ReactDOM from "react-dom/client";
-import {
-  WS_BASE
-} from "../config/env";
 const PresenceContext = createContext();
+const WS_BASE =
+  import.meta.env.VITE_WS_BASE ||
+  "ws://127.0.0.1:8000";
 
 
 export const PresenceProvider = ({ children }) => {
