@@ -328,6 +328,6 @@ docker compose build --no-cache
 
 # Tác giả
 
-Sinh viên thực hiện: <TÊN_BẠN>
+Sinh viên thực hiện: <HOÀNG VĂN ĐỨC>
 
 Project phục vụ mục đích nghiên cứu và học tập.
