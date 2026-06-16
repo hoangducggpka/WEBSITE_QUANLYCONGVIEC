@@ -736,7 +736,7 @@ function Messages() {
                                             );
                                         }
                                         const message = item.data;
-                                        const isMe = message.sender_id === currentUserId;
+                                        const isMe = String(message.sender_id) === String(currentUserId);
                                         const msgReactions = reactions[message.id] ?? [];
 
                                         return (

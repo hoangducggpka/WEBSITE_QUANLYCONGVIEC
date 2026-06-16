@@ -21,7 +21,10 @@ class PresenceConsumer(AsyncWebsocketConsumer):
 
         ONLINE_USERS.add(self.user_id)
 
-        print("ONLINE:", ONLINE_USERS)
+        await self.channel_layer.group_add(
+            "presence",
+            self.channel_name,
+        )
 
         await self.channel_layer.group_send(
             "presence",
@@ -29,11 +32,6 @@ class PresenceConsumer(AsyncWebsocketConsumer):
                 "type": "presence_update",
                 "online_users": list(ONLINE_USERS),
             },
-        )
-
-        await self.channel_layer.group_add(
-            "presence",
-            self.channel_name,
         )
 
     async def disconnect(self, close_code):
