@@ -31,7 +31,7 @@ export const PresenceProvider = ({ children }) => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
+      console.log("[Presence] received:", data); 
       if (data.type === "presence_update") {
         setOnlineUsers(data.online_users);
       }
