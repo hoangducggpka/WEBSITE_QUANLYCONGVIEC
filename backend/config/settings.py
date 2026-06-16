@@ -37,9 +37,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "host.docker.internal",
     "backend",
-    "kong-complications-characters-frozen.trycloudflare.com",
-    "hockey-jackie-logging-considers.trycloudflare.com",
-    
+    ".trycloudflare.com",
 ]
 
 
