@@ -8,7 +8,8 @@ from rest_framework import status
 
 from apps.groups.models import Group, GroupMember
 from apps.notifications.models import Notification
-
+from apps.chat.services.chat_service import (get_or_create_group_conversation, add_user_to_group_conversation)
+from apps.notifications.notification_service import create_notification_and_broadcast
 class RejectRequestView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -29,12 +30,12 @@ class RejectRequestView(APIView):
         leader_fullname = getattr(user.profile, "fullname", user.username)
         content = f'{leader_fullname} | {group.name} | Yêu cầu vào nhóm "{group.name}" của bạn đã bị từ chối'
 
-        Notification.objects.create(
+        create_notification_and_broadcast(
             user=req.user,
             content=content,
-            priority=2 
+            group_name=f"user_{req.user.id}",
+            priority=2,
         )
-
         # xoá req
         req.delete()
 
@@ -103,12 +104,18 @@ class ApproveRequestView(APIView):
         leader_name = leader_profile.fullname
         group_name = group.name
 
-        content = f"{leader_name} | {group_name} | {leader_name} đã thêm bạn vào nhóm '{group_name}'"
-
+        content = f"{leader_name} | {group_name} | {leader_name} đã duyệt yêu cầu vào nhóm '{group_name}'"
+        add_user_to_group_conversation(group, req.user)
         Notification.objects.create(
             user=req.user,
             content=content,
             priority=1
+        )
+        create_notification_and_broadcast(
+            user=req.user,
+            content=content,
+            group_name=f"user_{req.user.id}",
+            priority=2,
         )
         req.delete()
 

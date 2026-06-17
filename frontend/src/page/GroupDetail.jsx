@@ -20,6 +20,7 @@ import {
   MdOutlineSearch,
   MdOutlineInbox,
   MdOutlineAdminPanelSettings,
+  MdOutlineContentCopy,
 } from "react-icons/md";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -172,7 +173,24 @@ function GroupDetail() {
       setLoading(false);
     }
   };
+  // ── Group ID hiển thị: # + đoạn đầu uuid (trước dấu "-" đầu tiên) ──
+  const groupShortId = useMemo(() => {
+    const src = group?.uuid || uuid; // ưu tiên uuid trong group, fallback params
+    if (!src) return "";
+    return `#${src.split("-")[0]}`;
+  }, [group, uuid]);
 
+  const handleCopyGroupId = async () => {
+    if (!groupShortId) return;
+    try {
+      await navigator.clipboard.writeText(groupShortId);
+      // có thể thay alert bằng toast nếu app đã có sẵn
+      alert(`Đã copy: ${groupShortId}`);
+    } catch (err) {
+      console.error("[GroupDetail] Copy ID error:", err);
+      alert("Không thể copy ID. Vui lòng thử lại.");
+    }
+  };
   useEffect(() => {
     if (uuid) loadGroup();
   }, [uuid]);
@@ -517,11 +535,25 @@ function GroupDetail() {
           <div className={styles.group_text}>
             {/* data.group.name */}
             <h2 className={styles.group_name}>{group.name}</h2>
-            {/* data.group.description (hiện tại BE trả về rỗng) */}
+            {/* Hiển thị ID nhóm thay cho description: # + đoạn đầu uuid */}
+            <div className={styles.group_id_row}>
+              <span className={styles.group_desc}>{groupShortId}</span>
+              <button
+                type="button"
+                className={styles.btn_copy_id}
+                onClick={handleCopyGroupId}
+                title="Copy ID nhóm"
+              >
+                <MdOutlineContentCopy />
+              </button>
+            </div>
+          </div>
+          {/* <div className={styles.group_text}>
+            <h2 className={styles.group_name}>{group.name}</h2>
             <p className={styles.group_desc}>
               {group.description || "Chưa có mô tả"}
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Stats + Actions */}
