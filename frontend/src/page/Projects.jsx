@@ -643,12 +643,12 @@ export default function Projects() {
 
           {/* Right: group selector */}
           <div className={styles.topRight} >
-            <div className={styles.groupInfo} onClick={() => {
-                      navigate(`/group-detail/${selectedGroup?.uuid}/`);
-                    }}>
+            <div className={styles.groupInfo} >
               {selectedGroup ? (
                 <>
-                  <h3
+                  <h3 onClick={() => {
+                      navigate(`/group-detail/${selectedGroup?.uuid}/`);
+                    }}
                     title={selectedGroup.group_name}
 
                   >{selectedGroup.group_name}</h3>
