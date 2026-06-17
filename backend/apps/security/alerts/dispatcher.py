@@ -3,6 +3,12 @@
 from apps.security.alerts.telegram import send_telegram_alert
 from apps.security.alerts.websocket_alert import send_security_alert
 
+from django.utils import timezone
+
+def format_local_time(dt):
+    local_dt = timezone.localtime(dt)
+    return local_dt.strftime("%d/%m/%Y %H:%M:%S")
+
 
 def build_vi_message(event):
     if event.event_type == "LOGIN_BRUTEFORCE":
@@ -16,8 +22,7 @@ Endpoint: {event.endpoint}
 
 Số lần thử: {event.metadata.get("attempts", "N/A")}
 
-Thời gian: {event.created_at}
-"""
+Thời gian: {format_local_time(event.created_at)}"""
 
     if event.event_type == "JWT_ABUSE":
         return f"""
@@ -30,8 +35,7 @@ Endpoint: {event.endpoint}
 
 Số lần vi phạm: {event.metadata.get("count", "N/A")}
 
-Thời gian: {event.created_at}
-"""
+Thời gian: {format_local_time(event.created_at)}"""
 
     return f"""
 🔔 CẢNH BÁO HỆ THỐNG
@@ -41,8 +45,7 @@ Mức độ: {event.severity}
 IP: {event.ip_address}
 Endpoint: {event.endpoint}
 
-Thời gian: {event.created_at}
-"""
+Thời gian: {format_local_time(event.created_at)}"""
 
 
 def dispatch_security_alert(event):

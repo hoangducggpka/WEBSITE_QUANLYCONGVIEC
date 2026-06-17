@@ -1679,42 +1679,109 @@ export default function ProjectDetail() {
     useEffect(() => {
         if (!uuid) return;
         const token = localStorage.getItem("access") || "";
-        const ws = new WebSocket(`${WS_BASE}/ws/comments/${uuid}/?token=${token}`);
-        commentWsRef.current = ws;
+        let cancelled = false;
+        let ws;
 
-        ws.onmessage = ({ data }) => {
-            try {
-                const msg = JSON.parse(data);
-                if (msg.action === "new_comment") {
-                    const c = msg.comment;
-                    const isReply = !Object.prototype.hasOwnProperty.call(c, "replies");
-                    if (isReply) {
-                        const parentUuid = msg.parent_uuid;
-                        if (parentUuid) {
-                            setComments(prev => prev.map(cm =>
-                                cm.uuid === parentUuid
-                                    ? { ...cm, replies: [...(cm.replies || []), c] }
-                                    : cm
-                            ));
-                        } else { fetchComments(); }
-                    } else {
-                        setComments(prev => [c, ...prev]);
+        const connect = () => {
+            ws = new WebSocket(`${WS_BASE}/ws/comments/${uuid}/?token=${token}`);
+            commentWsRef.current = ws;
+
+            ws.onopen = () => {
+                console.log("[Comment WS] connected");
+            };
+
+            ws.onmessage = ({ data }) => {
+                try {
+                    const msg = JSON.parse(data);
+                    if (msg.action === "new_comment") {
+                        const c = msg.comment;
+                        const isReply = !Object.prototype.hasOwnProperty.call(c, "replies");
+                        if (isReply) {
+                            const parentUuid = msg.parent_uuid;
+                            if (parentUuid) {
+                                setComments(prev => prev.map(cm =>
+                                    cm.uuid === parentUuid
+                                        ? { ...cm, replies: [...(cm.replies || []), c] }
+                                        : cm
+                                ));
+                            } else { fetchComments(); }
+                        } else {
+                            setComments(prev => [c, ...prev]);
+                        }
+                    } else if (msg.action === "delete_comment") {
+                        setComments(prev =>
+                            prev.filter(c => c.uuid !== msg.comment_uuid)
+                                .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.uuid !== msg.comment_uuid) }))
+                        );
+                    } else if (msg.action === "pin_comment") {
+                        setComments(prev =>
+                            prev.map(c => c.uuid === msg.comment_uuid ? { ...c, pinned: msg.pinned } : c)
+                        );
                     }
-                } else if (msg.action === "delete_comment") {
-                    setComments(prev =>
-                        prev.filter(c => c.uuid !== msg.comment_uuid)
-                            .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.uuid !== msg.comment_uuid) }))
-                    );
-                } else if (msg.action === "pin_comment") {
-                    setComments(prev =>
-                        prev.map(c => c.uuid === msg.comment_uuid ? { ...c, pinned: msg.pinned } : c)
-                    );
+                } catch { }
+            };
+
+            ws.onerror = (e) => {
+                console.log("[Comment WS] error", e);
+            };
+
+            ws.onclose = (e) => {
+                console.log("[Comment WS] closed", e.code, e.reason);
+                // Re-sync state phòng trường hợp đã miss message trong lúc rớt
+                if (!cancelled) fetchComments();
+                if (!cancelled && e.code !== 1000) {
+                    setTimeout(connect, 2000);
                 }
-            } catch { }
+            };
         };
-        ws.onerror = () => fetchComments();
-        return () => { ws.close(); commentWsRef.current = null; };
+
+        connect();
+
+        return () => {
+            cancelled = true;
+            if (ws) ws.close(1000, "component unmount");
+            commentWsRef.current = null;
+        };
     }, [uuid]);
+    // useEffect(() => {
+    //     if (!uuid) return;
+    //     const token = localStorage.getItem("access") || "";
+    //     const ws = new WebSocket(`${WS_BASE}/ws/comments/${uuid}/?token=${token}`);
+    //     commentWsRef.current = ws;
+
+    //     ws.onmessage = ({ data }) => {
+    //         try {
+    //             const msg = JSON.parse(data);
+    //             if (msg.action === "new_comment") {
+    //                 const c = msg.comment;
+    //                 const isReply = !Object.prototype.hasOwnProperty.call(c, "replies");
+    //                 if (isReply) {
+    //                     const parentUuid = msg.parent_uuid;
+    //                     if (parentUuid) {
+    //                         setComments(prev => prev.map(cm =>
+    //                             cm.uuid === parentUuid
+    //                                 ? { ...cm, replies: [...(cm.replies || []), c] }
+    //                                 : cm
+    //                         ));
+    //                     } else { fetchComments(); }
+    //                 } else {
+    //                     setComments(prev => [c, ...prev]);
+    //                 }
+    //             } else if (msg.action === "delete_comment") {
+    //                 setComments(prev =>
+    //                     prev.filter(c => c.uuid !== msg.comment_uuid)
+    //                         .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.uuid !== msg.comment_uuid) }))
+    //                 );
+    //             } else if (msg.action === "pin_comment") {
+    //                 setComments(prev =>
+    //                     prev.map(c => c.uuid === msg.comment_uuid ? { ...c, pinned: msg.pinned } : c)
+    //                 );
+    //             }
+    //         } catch { }
+    //     };
+    //     ws.onerror = () => fetchComments();
+    //     return () => { ws.close(); commentWsRef.current = null; };
+    // }, [uuid]);
 
     // Shared handlers dùng chung cho cả panel và modal:
     const sendCommentWs = (payload) => {
@@ -1827,31 +1894,84 @@ export default function ProjectDetail() {
     const wsRef = useRef(null);
     useEffect(() => {
         if (!uuid) return;
-        if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) return;
-        const ws = new WebSocket(`${WS_BASE}/ws/projects/${uuid}/?token=${getToken()}`);
-        wsRef.current = ws;
-        ws.onmessage = ({ data }) => {
-            try {
-                const msg = JSON.parse(data);
-                if (msg.type === "project_progress") {
-                    setProject(p => p ? { ...p, progress: msg.project_progress } : p);
-                } else if (msg.type === "task_progress") {
-                    setProject(p => {
-                        if (!p) return p;
-                        return {
-                            ...p,
-                            tasks: (p.tasks || []).map(t =>
-                                t.uuid === msg.task_uuid
-                                    ? { ...t, progress: msg.progress, status: msg.status }
-                                    : t
-                            ),
-                        };
-                    });
+        let cancelled = false;
+        let ws;
+
+        const connect = () => {
+            ws = new WebSocket(`${WS_BASE}/ws/projects/${uuid}/?token=${getToken()}`);
+            wsRef.current = ws;
+
+            ws.onopen = () => console.log("[Project WS] connected");
+
+            ws.onmessage = ({ data }) => {
+                try {
+                    const msg = JSON.parse(data);
+                    if (msg.type === "project_progress") {
+                        setProject(p => p ? { ...p, progress: msg.project_progress } : p);
+                    } else if (msg.type === "task_progress") {
+                        setProject(p => {
+                            if (!p) return p;
+                            return {
+                                ...p,
+                                tasks: (p.tasks || []).map(t =>
+                                    t.uuid === msg.task_uuid
+                                        ? { ...t, progress: msg.progress, status: msg.status }
+                                        : t
+                                ),
+                            };
+                        });
+                    }
+                } catch { /* ignore */ }
+            };
+
+            ws.onerror = (e) => console.log("[Project WS] error", e);
+
+            ws.onclose = (e) => {
+                console.log("[Project WS] closed", e.code, e.reason);
+                if (!cancelled && e.code !== 1000) {
+                    // reconnect sau 2s nếu không phải đóng chủ động
+                    setTimeout(connect, 2000);
                 }
-            } catch { /* ignore */ }
+            };
         };
-        return () => { ws.close(); wsRef.current = null; };
+
+        connect();
+
+        return () => {
+            cancelled = true;
+            if (ws) ws.close(1000, "component unmount");
+            wsRef.current = null;
+        };
     }, [uuid]);
+    // useEffect(() => {
+    //     if (!uuid) return;
+    //     if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) return;
+    //     const ws = new WebSocket(`${WS_BASE}/ws/projects/${uuid}/?token=${getToken()}`);
+    //     wsRef.current = ws;
+    //     ws.onclose = (e) => console.log("WS closed", e.code, e.reason);
+    //     ws.onerror = (e) => console.log("WS error", e);
+    //     ws.onmessage = ({ data }) => {
+    //         try {
+    //             const msg = JSON.parse(data);
+    //             if (msg.type === "project_progress") {
+    //                 setProject(p => p ? { ...p, progress: msg.project_progress } : p);
+    //             } else if (msg.type === "task_progress") {
+    //                 setProject(p => {
+    //                     if (!p) return p;
+    //                     return {
+    //                         ...p,
+    //                         tasks: (p.tasks || []).map(t =>
+    //                             t.uuid === msg.task_uuid
+    //                                 ? { ...t, progress: msg.progress, status: msg.status }
+    //                                 : t
+    //                         ),
+    //                     };
+    //                 });
+    //             }
+    //         } catch { /* ignore */ }
+    //     };
+    //     return () => { ws.close(); wsRef.current = null; };
+    // }, [uuid]);
 
     // ── Derived data ───────────────────────────────────────────────────────
     const tasks          = project?.tasks           || [];
@@ -1868,14 +1988,10 @@ export default function ProjectDetail() {
         const total = end - start;
         if (total <= 0) return false;
 
-        const elapsed = now - start;          // thời gian đã trôi qua
-        const elapsedRatio = elapsed / total; // tỉ lệ đã trôi qua (0 → 1)
+        const elapsed = now - start;    
+        const elapsedRatio = elapsed / total; 
         const progress = task.progress ?? 0;
 
-        // Cảnh báo nếu:
-        // 1. Đã qua 50% thời gian nhưng vẫn todo (chưa bắt đầu làm)
-        // 2. Progress < 20% trong khi đã qua 80% thời gian
-        // 3. Deadline còn < 10% thời gian mà chưa done
         return (
             (elapsedRatio >= 0.5 && task.status === "todo") ||
             (elapsedRatio >= 0.8 && progress < 20) ||

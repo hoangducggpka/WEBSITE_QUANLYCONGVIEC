@@ -123,12 +123,12 @@ class MessageConsumer(AsyncWebsocketConsumer):
             "message_id": event["message_id"],
         }))
     async def message_reacted(self, event):
-        return
-        # await self.send(text_data=json.dumps({
-        #     "type":       "message_reacted",
-        #     "message_id": event["message_id"],
-        #     "reactions":  event["reactions"],
-        # }))
+        # return
+        await self.send(text_data=json.dumps({
+            "type":       "message_reacted",
+            "message_id": event["message_id"],
+            "reactions":  event["reactions"],
+        }))
 
     # ── DB helpers ────────────────────────────────────────────────
 

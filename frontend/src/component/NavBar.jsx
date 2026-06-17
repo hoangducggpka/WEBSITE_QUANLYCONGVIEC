@@ -261,49 +261,98 @@ function NavBar() {
 
     const chatWsRef = useRef(null);
 
+
     useEffect(() => {
         const token = localStorage.getItem("access");
         if (!token) return;
 
-        const ws = new WebSocket(
-            `${WS_BASE}/ws/chat/global/?token=${token}`
-        );
+        let cancelled = false;
+        let ws;
 
-        chatWsRef.current = ws;
+        const connect = () => {
+            ws = new WebSocket(`${WS_BASE}/ws/chat/global/?token=${token}`);
+            chatWsRef.current = ws;
 
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
+            ws.onopen = () => {
+                console.log("[GLOBAL CHAT WS] connected");
+            };
 
-                if (data.type === "unread_message") {
-
-                   console.log("[GLOBAL MESSAGE]", data); 
-                   setUnreadMessages(data.unread_count);
-
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === "unread_message") {
+                        console.log("[GLOBAL MESSAGE]", data);
+                        setUnreadMessages(data.unread_count);
+                    }
+                } catch (e) {
+                    console.error("[GLOBAL CHAT WS]", e);
                 }
+            };
 
-            } catch (e) {
-                console.error("[GLOBAL CHAT WS]", e);
-            }
+            ws.onerror = (err) => {
+                console.error("[GLOBAL CHAT WS] error", err);
+            };
+
+            ws.onclose = (e) => {
+                console.log("[GLOBAL CHAT WS] disconnected", e.code, e.reason);
+                // Re-sync unread count phòng trường hợp miss message khi rớt
+                fetchUnreadCount();
+                if (!cancelled && e.code !== 1000) {
+                    setTimeout(connect, 2000);
+                }
+            };
         };
 
-        ws.onopen = () => {
-        console.log("[GLOBAL CHAT WS] connected");
+        connect();
+
+        return () => {
+            cancelled = true;
+            if (ws) ws.close(1000, "unmount");
         };
-
-        ws.onclose = () => {
-        console.log("[GLOBAL CHAT WS] disconnected");
-        };
-
-        ws.onerror = (err) => {
-        console.error("[GLOBAL CHAT WS] error", err);
-        };
-
-
-        return () => ws.close();
-
-
     }, []);
+    // useEffect(() => {
+    //     const token = localStorage.getItem("access");
+    //     if (!token) return;
+
+    //     const ws = new WebSocket(
+    //         `${WS_BASE}/ws/chat/global/?token=${token}`
+    //     );
+
+    //     chatWsRef.current = ws;
+
+    //     ws.onmessage = (event) => {
+    //         try {
+    //             const data = JSON.parse(event.data);
+
+    //             if (data.type === "unread_message") {
+
+    //                console.log("[GLOBAL MESSAGE]", data); 
+    //                setUnreadMessages(data.unread_count);
+
+    //             }
+
+    //         } catch (e) {
+    //             console.error("[GLOBAL CHAT WS]", e);
+    //         }
+    //     };
+
+    //     ws.onopen = () => {
+    //     console.log("[GLOBAL CHAT WS] connected");
+    //     };
+
+    //     ws.onclose = () => {
+    //     console.log("[GLOBAL CHAT WS] disconnected");
+    //     };
+
+    //     ws.onerror = (err) => {
+    //     console.error("[GLOBAL CHAT WS] error", err);
+    //     };
+
+
+    //     return () => ws.close();
+
+
+    // }, []);
 
 
     const handleClick = (item) => {
