@@ -547,7 +547,9 @@ function GroupDetail() {
           <div className={styles.action_row}>
             <button
               className={styles.btn_projects}
-              onClick={() => navigate("/projects")}
+              onClick={() => {
+                localStorage.setItem("projects_last_group_uuid", uuid);
+                navigate("/projects")}}
             >
               <MdOutlineFolder /> Dự án nhóm
             </button>
@@ -744,7 +746,7 @@ function GroupDetail() {
               <button
                 key={p.uuid}
                 className={styles.proj_card}
-                onClick={() => navigate(`/projects/${p.uuid}`)}
+                onClick={() => navigate(`/project-detail/${p.uuid}`)}
               >
                 <MdOutlineFolder className={styles.proj_icon} />
                 <div className={styles.proj_info}>

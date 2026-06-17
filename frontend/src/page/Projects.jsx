@@ -260,7 +260,6 @@ function GroupSelectModal({ onClose, onSelect, currentUuid }) {
               onClick={() => { onSelect(g); onClose(); }}
             >
               <div className={styles.gcLeft}>
-                {/* Group name – hover → navigate to group detail */}
                 <h4
                   className={styles.gcName}
                   title="Đến trang chi tiết nhóm"
@@ -526,7 +525,7 @@ export default function Projects() {
 
   // ── Navigate to project detail ────────────────────────────────────────────
   const goDetail = (uuid) => {
-    localStorage.setItem("project_page_last_route", `/project-detail/${uuid}`);
+    localStorage.setItem("projects_last_group_uuid", `/project-detail/${uuid}`);
     navigate(`/project-detail/${uuid}`);
   };
 
@@ -646,12 +645,21 @@ export default function Projects() {
             <div className={styles.groupInfo} >
               {selectedGroup ? (
                 <>
-                  <h3 onClick={() => {
+                  {/* <h3 onClick={() => {
                       navigate(`/group-detail/${selectedGroup?.uuid}/`);
                     }}
                     title={selectedGroup.group_name}
 
-                  >{selectedGroup.group_name}</h3>
+                  >{selectedGroup.group_name}</h3> */}
+                  <h3
+                      onClick={() => {
+                          if (!selectedGroup?.uuid) return;
+                          navigate(`/group-detail/${selectedGroup.uuid}/`);
+                      }}
+                      title={selectedGroup.group_name}
+                  >
+                      {selectedGroup.group_name}
+                  </h3>
                   <div className={styles.groupLeaderRow}>
                     {selectedGroup.leader?.avatarpath
                       ? <img src={selectedGroup.leader.avatarpath} alt="ldr" className={styles.ldrAvatar} />
