@@ -204,32 +204,47 @@ class MessageConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_total_unread(self, user_id):
-        from apps.chat.models import ConversationMember
+        from apps.chat.services.chat_service import get_total_unread_for_user
+        from django.contrib.auth.models import User
 
-        total = 0
+        user = User.objects.get(id=user_id)
+        return get_total_unread_for_user(user)
+    @database_sync_to_async
+    def get_conversation_unread(self, user_id):
+        from apps.chat.services.chat_service import get_conversation_unread_for_user
+        from django.contrib.auth.models import User
 
-        members = ConversationMember.objects.filter(
-            user_id=user_id
-        ).select_related("conversation")
+        user = User.objects.get(id=user_id)
+        return get_conversation_unread_for_user(self.conversation, user)
+    
+    # @database_sync_to_async
+    # def get_total_unread(self, user_id):
+    #     from apps.chat.models import ConversationMember
 
-        for member in members:
+    #     total = 0
 
-            if member.last_seen is None:
-                count = member.conversation.messages.exclude(
-                    sender_id=user_id
-                ).count()
+    #     members = ConversationMember.objects.filter(
+    #         user_id=user_id
+    #     ).select_related("conversation")
 
-            else:
-                count = member.conversation.messages.filter(
-                    created_at__gt=member.last_seen,
-                    is_deleted=False
-                ).exclude(
-                    sender_id=user_id
-                ).count()
+    #     for member in members:
 
-            total += count
+    #         if member.last_seen is None:
+    #             count = member.conversation.messages.exclude(
+    #                 sender_id=user_id
+    #             ).count()
 
-        return total
+    #         else:
+    #             count = member.conversation.messages.filter(
+    #                 created_at__gt=member.last_seen,
+    #                 is_deleted=False
+    #             ).exclude(
+    #                 sender_id=user_id
+    #             ).count()
+
+    #         total += count
+
+    #     return total
 
 
     # @database_sync_to_async

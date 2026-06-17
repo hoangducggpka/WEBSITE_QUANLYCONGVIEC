@@ -152,3 +152,44 @@ def send_message(user, conversation, content, msg_type="text", reply_to=None):
     _broadcast_message(user, msg, reply_to_data=reply_to_data)
     return msg
 
+# ─────────────────────────────────────────────
+# 4. UNREAD COUNT HELPERS (dùng chung cho consumer + REST view)
+# ─────────────────────────────────────────────
+
+def get_total_unread_for_user(user):
+    """Tổng số tin nhắn chưa đọc của user trên tất cả conversation."""
+    total = 0
+    members = ConversationMember.objects.filter(
+        user=user
+    ).select_related("conversation")
+
+    for member in members:
+        if member.last_seen is None:
+            count = member.conversation.messages.filter(
+                is_deleted=False
+            ).exclude(sender=user).count()
+        else:
+            count = member.conversation.messages.filter(
+                created_at__gt=member.last_seen,
+                is_deleted=False
+            ).exclude(sender=user).count()
+        total += count
+
+    return total
+
+
+def get_conversation_unread_for_user(conversation, user):
+    """Số tin nhắn chưa đọc của user trong 1 conversation cụ thể."""
+    try:
+        member = ConversationMember.objects.get(
+            conversation=conversation, user=user
+        )
+    except ConversationMember.DoesNotExist:
+        return 0
+
+    if member.last_seen is None:
+        return conversation.messages.filter(is_deleted=False).exclude(sender=user).count()
+
+    return conversation.messages.filter(
+        created_at__gt=member.last_seen, is_deleted=False
+    ).exclude(sender=user).count()

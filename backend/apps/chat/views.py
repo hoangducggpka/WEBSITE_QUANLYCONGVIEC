@@ -11,8 +11,16 @@ from .serializers import ConversationSerializer, MessageSerializer
 from apps.chat.services.chat_service import (
     get_or_create_private_conversation,
     get_or_create_group_conversation,
+    get_total_unread_for_user
 )
 
+
+class UnreadCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        total = get_total_unread_for_user(request.user)
+        return Response({"unread_count": total})
 
 # ─────────────────────────────────────────────
 # Conversations

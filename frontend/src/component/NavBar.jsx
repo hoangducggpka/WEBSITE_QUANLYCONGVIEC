@@ -261,7 +261,17 @@ function NavBar() {
 
     const chatWsRef = useRef(null);
 
+    const fetchUnreadCount = useCallback(async () => {
+        try {
+            const res = await apiFetch(`/chat/unread-count/`); // endpoint REST tương ứng, bạn cần có route này ở backend
+            const data = await res.json();
+            setUnreadMessages(data.unread_count ?? 0);
+        } catch { }
+    }, []);
 
+    useEffect(() => {
+        fetchUnreadCount();
+    }, [fetchUnreadCount]);
     useEffect(() => {
         const token = localStorage.getItem("access");
         if (!token) return;
@@ -296,7 +306,7 @@ function NavBar() {
             ws.onclose = (e) => {
                 console.log("[GLOBAL CHAT WS] disconnected", e.code, e.reason);
                 // Re-sync unread count phòng trường hợp miss message khi rớt
-                // fetchUnreadCount();
+                fetchUnreadCount();
                 if (!cancelled && e.code !== 1000) {
                     setTimeout(connect, 2000);
                 }

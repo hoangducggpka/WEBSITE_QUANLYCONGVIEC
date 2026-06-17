@@ -9,7 +9,8 @@ from .views import (
     UnpinMessageView,
     RecallMessageView,
     MessageReactionView,
-    MarkConversationReadView
+    MarkConversationReadView,
+    UnreadCountView, 
 )
 
 urlpatterns = [
@@ -30,13 +31,5 @@ urlpatterns = [
     path("messages/<int:message_id>/unpin/",  UnpinMessageView.as_view()),
     path("messages/<int:message_id>/recall/", RecallMessageView.as_view()),
     path("messages/<int:message_id>/react/",  MessageReactionView.as_view()),
+    path("unread-count/", UnreadCountView.as_view()), 
 ]
-# # apps/chat/urls.py
-# from django.urls import path
-# from .views import ConversationListView, GroupConversationView, MessageListView
-
-# urlpatterns = [
-#     path("conversations/", ConversationListView.as_view()),
-#     path("conversations/group/", GroupConversationView.as_view()),
-#     path("conversations/<uuid:conversation_uuid>/messages/", MessageListView.as_view()),
-# ]

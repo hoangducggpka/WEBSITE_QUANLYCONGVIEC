@@ -44,33 +44,37 @@ class GlobalChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_total_unread(self):
+        from apps.chat.services.chat_service import get_total_unread_for_user
+        return get_total_unread_for_user(self.user)
+    # @database_sync_to_async
+    # def get_total_unread(self):
 
 
-        from apps.chat.models import ConversationMember
+    #     from apps.chat.models import ConversationMember
 
-        total = 0
+    #     total = 0
 
-        members = ConversationMember.objects.filter(
-            user=self.user
-        ).select_related("conversation")
+    #     members = ConversationMember.objects.filter(
+    #         user=self.user
+    #     ).select_related("conversation")
 
-        for member in members:
+    #     for member in members:
 
-            if member.last_seen is None:
-                count = member.conversation.messages.exclude(
-                    sender=self.user
-                ).count()
+    #         if member.last_seen is None:
+    #             count = member.conversation.messages.exclude(
+    #                 sender=self.user
+    #             ).count()
 
-            else:
-                count = member.conversation.messages.filter(
-                    created_at__gt=member.last_seen,
-                    is_deleted=False
-                ).exclude(
-                    sender=self.user
-                ).count()
+    #         else:
+    #             count = member.conversation.messages.filter(
+    #                 created_at__gt=member.last_seen,
+    #                 is_deleted=False
+    #             ).exclude(
+    #                 sender=self.user
+    #             ).count()
 
-            total += count
+    #         total += count
 
-        return total
+    #     return total
 
 
