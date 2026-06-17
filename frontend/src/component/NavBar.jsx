@@ -296,7 +296,7 @@ function NavBar() {
             ws.onclose = (e) => {
                 console.log("[GLOBAL CHAT WS] disconnected", e.code, e.reason);
                 // Re-sync unread count phòng trường hợp miss message khi rớt
-                fetchUnreadCount();
+                // fetchUnreadCount();
                 if (!cancelled && e.code !== 1000) {
                     setTimeout(connect, 2000);
                 }
