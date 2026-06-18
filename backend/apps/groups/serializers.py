@@ -48,6 +48,7 @@ class GroupDetailSerializer(serializers.Serializer):
             "user_id": leader.id,
             "fullname": leader.profile.fullname,
             "username": leader.username,
+            "user_code": leader.profile.user_code, 
             "avatarpath":
                 self.context["request"]
                 .build_absolute_uri(

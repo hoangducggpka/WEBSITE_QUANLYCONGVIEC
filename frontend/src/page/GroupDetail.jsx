@@ -632,7 +632,7 @@ function GroupDetail() {
             <MdOutlineSearch className={styles.search_icon} />
             <input
               type="text"
-              placeholder="Tìm theo tên, username, mã sinh viên..."
+              placeholder="Tìm theo tên, username, mã thành viên..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -671,7 +671,7 @@ function GroupDetail() {
                   />
                 </th>
                 <th>Thành viên</th>
-                <th>Mã sinh viên</th>
+                <th>Mã thành viên</th>
                 <th>Vai trò</th>
                 <th>Trạng thái</th>
                 <th></th>
@@ -724,7 +724,7 @@ function GroupDetail() {
                     <td>
                       {/* leader không có user_code trong response hiện tại */}
                       <span className={styles.code_chip}>
-                        {m.user_code || m.username || "—"}
+                        {m.user_code || "—"}
                       </span>
                     </td>
 
