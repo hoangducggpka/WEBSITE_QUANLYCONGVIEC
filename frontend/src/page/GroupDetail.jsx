@@ -590,7 +590,19 @@ function GroupDetail() {
               <MdOutlineFolder /> Dự án nhóm
             </button>
 
-            <button
+            {group.is_leader && (
+              <button
+                className={styles.btn_requests}
+                onClick={() => setModal("requests")}
+              >
+                <MdOutlineInbox />
+                Yêu cầu tham gia
+                {requests.length > 0 && (
+                  <span className={styles.badge_count}>{requests.length}</span>
+                )}
+              </button>
+            )}
+            {/* <button
               className={styles.btn_requests}
               onClick={() => setModal("requests")}
             >
@@ -599,7 +611,7 @@ function GroupDetail() {
               {requests.length > 0 && (
                 <span className={styles.badge_count}>{requests.length}</span>
               )}
-            </button>
+            </button> */}
 
             <button
               className={styles.btn_chat}
