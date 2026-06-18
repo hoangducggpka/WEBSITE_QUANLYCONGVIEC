@@ -75,7 +75,7 @@ const Login = () => {
       setError("");
 
       try {
-          const res = await fetch(`${API_BASE}/register/`, {
+          const res = await fetch(`${API_BASE}/accounts/register/`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
