@@ -47,6 +47,18 @@ function fmtDate(iso) {
 }
 
 // ─── AvatarStack ──────────────────────────────────────────────────────────────
+function AvatarImg({ src, name, style }) {
+  const [error, setError] = useState(false);
+  if (error) return (
+    <div className={styles.avatarInitial} style={style}>
+      {(name || "?")[0].toUpperCase()}
+    </div>
+  );
+  return (
+    <img src={src} alt="" title={name} style={style} onError={() => setError(true)} />
+  );
+}
+
 function AvatarStack({ people = [], max = 4, size = 30 }) {
   const shown = people.slice(0, max);
   const rest  = people.length - max;
@@ -54,8 +66,12 @@ function AvatarStack({ people = [], max = 4, size = 30 }) {
     <div className={styles.avatarStack}>
       {shown.map((p, i) =>
         p.avatarpath
-          ? <img key={p.user_id ?? i} src={p.avatarpath} alt="" title={p.fullname || p.username}
-              style={{ width: size, height: size, zIndex: max - i }} />
+          ? <AvatarImg
+              key={p.user_id ?? i}
+              src={p.avatarpath}
+              name={p.fullname || p.username}
+              style={{ width: size, height: size, zIndex: max - i }}
+            />
           : <div key={p.user_id ?? i} className={styles.avatarInitial}
               style={{ width: size, height: size, zIndex: max - i }}>
               {(p.fullname || p.username || "?")[0].toUpperCase()}
@@ -67,6 +83,26 @@ function AvatarStack({ people = [], max = 4, size = 30 }) {
     </div>
   );
 }
+// function AvatarStack({ people = [], max = 4, size = 30 }) {
+//   const shown = people.slice(0, max);
+//   const rest  = people.length - max;
+//   return (
+//     <div className={styles.avatarStack}>
+//       {shown.map((p, i) =>
+//         p.avatarpath
+//           ? <img key={p.user_id ?? i} src={p.avatarpath} alt="" title={p.fullname || p.username}
+//               style={{ width: size, height: size, zIndex: max - i }} />
+//           : <div key={p.user_id ?? i} className={styles.avatarInitial}
+//               style={{ width: size, height: size, zIndex: max - i }}>
+//               {(p.fullname || p.username || "?")[0].toUpperCase()}
+//             </div>
+//       )}
+//       {rest > 0 && (
+//         <div className={styles.avatarMore} style={{ width: size, height: size }}>+{rest}</div>
+//       )}
+//     </div>
+//   );
+// }
 
 // ─── CreateProjectModal ───────────────────────────────────────────────────────
 function CreateProjectModal({ group, onClose, onCreated }) {
