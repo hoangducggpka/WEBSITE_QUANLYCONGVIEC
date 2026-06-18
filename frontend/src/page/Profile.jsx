@@ -468,6 +468,7 @@ function Profile() {
           email:    editUser.email,
           phone:    editUser.phone,
           address:  editUser.address,
+          user_code: editUser.user_code,
         }),
       });
       if (res.ok) {
@@ -679,6 +680,7 @@ function Profile() {
                 { key: "email",    icon: "✉️",  label: "Email",          type: "email" },
                 { key: "phone",    icon: "📞",  label: "Số điện thoại", type: "tel"   },
                 { key: "address",  icon: "📍",  label: "Địa chỉ",       type: "text"  },
+                { key: "user_code", icon: "🪪",  label: "Mã thành viên",  type: "text"  },
               ].map(({ key, icon, label, type }) => (
                 <div key={key} className={styles.info_item}>
                   <div className={styles.info_label_row}>
