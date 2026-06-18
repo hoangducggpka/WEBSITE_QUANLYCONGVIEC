@@ -436,6 +436,8 @@ function GroupDetail() {
 
   // ── Kick 1 thành viên ──
   const kickMember = async (userId) => {
+    const confirmLeave = window.confirm("Bạn có chắc xóa thành viên này?");
+    if (!confirmLeave) return;
     try {
       const res = await apiFetch(`/groups/${uuid}/kick/`, {
         method: "POST",
