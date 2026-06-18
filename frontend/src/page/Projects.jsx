@@ -525,7 +525,7 @@ export default function Projects() {
 
   // ── Navigate to project detail ────────────────────────────────────────────
   const goDetail = (uuid) => {
-    localStorage.setItem("projects_last_group_uuid", `/project-detail/${uuid}`);
+    // localStorage.setItem("projects_last_group_uuid", `/project-detail/${uuid}`);
     navigate(`/project-detail/${uuid}`);
   };
 
