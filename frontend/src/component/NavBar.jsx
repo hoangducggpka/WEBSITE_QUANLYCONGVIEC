@@ -248,7 +248,20 @@ function NotificationPanel({ notifications, isLoading, hasMore, unreadCount, onC
         </div>
     );
 }
-
+function AvatarImg({ src, name }) {
+    const [error, setError] = useState(false);
+    if (error) return (
+        <div className={styles.avatar_initials}>{getInitials(name)}</div>
+    );
+    return (
+        <img
+            src={src}
+            alt="avatar"
+            className={styles.avatar}
+            onError={() => setError(true)}
+        />
+    );
+}
 // ─── NavBar ───────────────────────────────────────────────────────────────────
 function NavBar() {
     const { user, logout }  = useAuth();
