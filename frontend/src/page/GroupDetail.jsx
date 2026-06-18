@@ -639,7 +639,7 @@ function GroupDetail() {
           </div>
 
           <div className={styles.toolbar_actions}>
-            {selected.length > 0 && (
+            {selected.length > 0 && group.is_leader && (
               <motion.button
                 className={styles.btn_delete}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -649,9 +649,11 @@ function GroupDetail() {
                 <MdOutlineDelete /> Xóa ({selected.length})
               </motion.button>
             )}
-            <button className={styles.btn_add} onClick={() => setModal("add")}>
-              <MdOutlinePersonAdd /> Thêm thành viên
-            </button>
+            {group.is_leader && (
+              <button className={styles.btn_add} onClick={() => setModal("add")}>
+                <MdOutlinePersonAdd /> Thêm thành viên
+              </button>
+            )}
           </div>
         </div>
 
@@ -661,14 +663,21 @@ function GroupDetail() {
             <thead>
               <tr>
                 <th className={styles.th_check}>
-                  <input
+                  {/* <input
                     type="checkbox"
                     checked={
                       selected.length === filtered.length &&
                       filtered.length > 0
                     }
                     onChange={toggleAll}
-                  />
+                  /> */}
+                  {group.is_leader && (
+                    <input
+                      type="checkbox"
+                      checked={selected.length === filtered.length && filtered.length > 0}
+                      onChange={toggleAll}
+                    />
+                  )}
                 </th>
                 <th>Thành viên</th>
                 <th>Mã thành viên</th>
@@ -694,8 +703,7 @@ function GroupDetail() {
                     transition={{ delay: i * 0.04 }}
                   >
                     <td className={styles.td_check}>
-                      {/* Leader không cho chọn để xóa */}
-                      {m.role !== "leader" && (
+                      {m.role !== "leader" && group.is_leader &&(
                         <input
                           type="checkbox"
                           checked={selected.includes(m.user_id)}
@@ -749,7 +757,7 @@ function GroupDetail() {
                     </td>
 
                     <td>
-                      {m.role !== "leader" && (
+                      {m.role !== "leader" && group.is_leader && (
                         <button
                           className={styles.btn_row_del}
                           onClick={() => kickMember(m.user_id)}
