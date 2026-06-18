@@ -18,7 +18,9 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../utils/api";
 
 
-
+// Thêm helper getInitials ở trên cùng file (sau import)
+const getInitials = (name = "") =>
+  name.split(" ").filter(Boolean).slice(-2).map((w) => w[0]).join("").toUpperCase();
 const PRIORITY_MAP = {
     1: { label: "Thấp", color: "#6b7280" },
     2: { label: "TB",   color: "#3b82f6" },
@@ -459,12 +461,19 @@ function NavBar() {
                                 setOpenDropdown((prev) => !prev);
                             }}
                         >
-                            <div className={styles.avatar_container}>
+                            {/* <div className={styles.avatar_container}>
                                 <img
                                     src={user?.avatarpath ? `${MEDIA_URL}${user.avatarpath}` : "/5.png"}
                                     alt="avatar"
                                     className={styles.avatar}
                                 />
+                            </div> */}
+                            <div className={styles.avatar_container}>
+                                {user?.avatarpath ? (
+                                    <AvatarImg src={`${MEDIA_URL}${user.avatarpath}`} name={user?.fullname} />
+                                ) : (
+                                    <div className={styles.avatar_initials}>{getInitials(user?.fullname)}</div>
+                                )}
                             </div>
                             <FaCaretDown />
 
