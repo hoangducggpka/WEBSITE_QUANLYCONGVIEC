@@ -483,7 +483,7 @@ function NavBar() {
                             </div> */}
                             <div className={styles.avatar_container}>
                                 {user?.avatarpath ? (
-                                    <AvatarImg src={`${MEDIA_URL}${user.avatarpath}`} name={user?.fullname} />
+                                    <AvatarImg  src={`${MEDIA_URL}${user.avatarpath}`} name={user?.fullname} />
                                 ) : (
                                     <div className={styles.avatar_initials}>{getInitials(user?.fullname)}</div>
                                 )}
