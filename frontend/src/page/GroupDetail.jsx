@@ -459,6 +459,8 @@ function GroupDetail() {
 
   // ── Kick nhiều thành viên đã chọn ──
   const deleteSelected = async () => {
+    const confirmLeave = window.confirm("Bạn có chắc xóa các thành viên này?");
+    if (!confirmLeave) return;
     try {
       const results = await Promise.all(
         selected.map((userId) =>
