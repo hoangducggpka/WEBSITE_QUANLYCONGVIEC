@@ -41,6 +41,7 @@ function Messages() {
     const [searchValue,        setSearchValue]        = useState("");
     const [loadingConvs,       setLoadingConvs]       = useState(true);
     const [loadingMsgs,        setLoadingMsgs]        = useState(false);
+    // const [unreadMessages, setUnreadMessages] = useState(0);
 
     // Feature states
     const [replyTo,            setReplyTo]            = useState(null);   // { id, content, sender_name }
@@ -51,6 +52,7 @@ function Messages() {
     const [showMsgMenu,        setShowMsgMenu]        = useState(null);   // message id
     const [reactions,          setReactions]          = useState({});     // { msgId: [{emoji, users}] }
     const [recallConfirm,      setRecallConfirm]      = useState(null);   // message id
+    
 
     // Thêm state để navigate giữa các pin
     const [pinnedIndex, setPinnedIndex] = useState(0);
@@ -255,9 +257,9 @@ function Messages() {
                 )
             );
 
-            setUnreadMessages(prev =>
-                Math.max(0, prev - conv.unread_count)
-            );
+            // setUnreadMessages(prev =>
+            //     Math.max(0, prev - conv.unread_count)
+            // );
 
         } catch (e) {
             console.error("Mark read error:", e);
@@ -638,7 +640,7 @@ function Messages() {
                                     <span>{item.last_message ? formatTime(item.last_message.created_at) : ""}</span>
                                 </div>
                                 <div className={styles.conversation_bottom}>
-                                    <p>{item.last_message?.content ?? "Chưa có tin nhắn"}</p>
+                                    <p>{item.unread_count > 0 ? "Có tin nhắn mới" : "Không có tin nhắn mới"}</p>
                                     {item.unread_count > 0 && (
                                         <div className={styles.unread_badge}>{item.unread_count}</div>
                                     )}
