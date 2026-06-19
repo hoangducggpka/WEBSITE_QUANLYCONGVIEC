@@ -301,7 +301,7 @@ function GroupSelectModal({ onClose, onSelect, currentUuid }) {
                   title="Đến trang chi tiết nhóm"
                   onClick={e => {
                     e.stopPropagation();
-                    localStorage.setItem("project_page_last_route", "/group-detail");
+                    // localStorage.setItem("project_page_last_route", `/group-detail?uuid=${g.uuid}`);
                     navigate(`/group-detail?uuid=${g.uuid}`);
                     onClose();
                   }}
