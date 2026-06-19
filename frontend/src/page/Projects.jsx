@@ -299,12 +299,12 @@ function GroupSelectModal({ onClose, onSelect, currentUuid }) {
                 <h4
                   className={styles.gcName}
                   title="Đến trang chi tiết nhóm"
-                  onClick={e => {
-                    e.stopPropagation();
-                    // localStorage.setItem("project_page_last_route", `/group-detail?uuid=${g.uuid}`);
-                    navigate(`/group-detail/${g.uuid}`);
-                    onClose();
-                  }}
+                  // onClick={e => {
+                  //   e.stopPropagation();
+                  //   // localStorage.setItem("project_page_last_route", `/group-detail?uuid=${g.uuid}`);
+                  //   navigate(`/group-detail/${g.uuid}`);
+                  //   onClose();
+                  // }}
                 >
                   {g.group_name}
                 </h4>
